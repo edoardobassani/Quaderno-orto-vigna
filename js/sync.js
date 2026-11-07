@@ -263,7 +263,11 @@ function renderSheet() {
     h += signedIn();
   }
   h += "</div></div>";
+  const keep = {}, focused = document.activeElement && el.contains(document.activeElement) ? document.activeElement.id : null;
+  el.querySelectorAll("input[id]").forEach((i) => { if (i.type !== "file") keep[i.id] = i.type === "checkbox" ? i.checked : i.value; });
   el.innerHTML = h;
+  Object.keys(keep).forEach((id) => { const i = document.getElementById(id); if (!i) return; if (i.type === "checkbox") i.checked = keep[id]; else if (!i.value) i.value = keep[id]; });
+  if (focused) { const f = document.getElementById(focused); if (f) f.focus(); }
 }
 function authForm() {
   const reg = authMode === "register";
@@ -319,13 +323,20 @@ async function act(a, id) {
       case "open": sheetOpen = true; break;
       case "close": sheetOpen = false; break;
       case "mode": authMode = id; break;
-      case "login": busy = true; renderSheet(); await A.signInWithEmailAndPassword(auth, val("saEmail"), document.getElementById("saPass").value); break;
-      case "register": {
+      case "login": {
+        const email = val("saEmail"), pass = (document.getElementById("saPass") || {}).value || "";
+        if (!email || !pass) { msg = "Scrivi email e password."; break; }
         busy = true; renderSheet();
-        const name = val("saName"), cred = await A.createUserWithEmailAndPassword(auth, val("saEmail"), document.getElementById("saPass").value);
-        if (name) await A.updateProfile(cred.user, { displayName: name });
-        await A.sendEmailVerification(cred.user).catch(() => {});
-        msg = "Account creato. Ti abbiamo mandato un'email per confermare l'indirizzo.";
+        await A.signInWithEmailAndPassword(auth, email, pass); break;
+      }
+      case "register": {
+        const name = val("saName"), email = val("saEmail"), pass = (document.getElementById("saPass") || {}).value || "";
+        if (!email || !pass) { msg = "Scrivi email e password."; break; }
+        busy = true; renderSheet();
+        const cred = await A.createUserWithEmailAndPassword(auth, email, pass);
+        if (name) await A.updateProfile(cred.user, { displayName: name }).catch(() => {});
+        try { await A.sendEmailVerification(cred.user); msg = "Account creato. Ti abbiamo mandato un'email per confermare l'indirizzo: controlla anche lo spam."; }
+        catch (e) { msg = "Account creato, ma l'email di conferma non è partita (" + errText(e) + "). Riprova con Rimanda il link."; }
         user = auth.currentUser; break;
       }
       case "reset": if (!val("saEmail")) { msg = "Scrivi prima la tua email."; break; } await A.sendPasswordResetEmail(auth, val("saEmail")); msg = "Ti abbiamo mandato un'email per scegliere una nuova password."; break;
