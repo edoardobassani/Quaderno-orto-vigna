@@ -4,7 +4,7 @@
 import { firebaseConfig } from "./config.js";
 
 const FB = "https://www.gstatic.com/firebasejs/10.12.2/";
-const COLS = ["parcelle", "piani", "campioni", "segni", "impostazioni", "articoli", "movimenti"];
+const COLS = ["parcelle", "piani", "campioni", "segni", "impostazioni", "articoli", "movimenti", "meteo"];
 const ROLES = { titolare: "Titolare", collaboratore: "Collaboratore", lettura: "Sola lettura" };
 const AKEY = "qo-azienda";
 const META = ["modificato", "modificatoDa"];
@@ -162,7 +162,10 @@ function decode() {
     maps: mg.maps || {},
     fatture: mg.fatture || []
   };
-  return { plots, plans, samples, geo: g && g.geo ? g.geo : null, marksMeta, inv };
+  const ms = (remote.impostazioni || {}).meteo || null, months = {};
+  Object.entries(remote.meteo || {}).forEach(([id, d]) => { months[id] = d.ore ? JSON.parse(d.ore) : {}; });
+  const meteo = ms ? Object.assign({}, ms.cfg || {}, { months }) : (Object.keys(months).length ? { months } : null);
+  return { plots, plans, samples, geo: g && g.geo ? g.geo : null, marksMeta, inv, meteo };
 }
 function encode(S) {
   const out = { parcelle: {}, piani: {}, campioni: {}, segni: {}, impostazioni: {}, articoli: {}, movimenti: {} };
@@ -181,6 +184,13 @@ function encode(S) {
   inv.items.forEach((it) => { const d = Object.assign({}, it); delete d.id; out.articoli[it.id] = clean(d); });
   inv.moves.forEach((m) => { const d = Object.assign({}, m); delete d.id; out.movimenti[m.id] = clean(d); });
   out.impostazioni.magazzino = clean({ maps: inv.maps || {}, fatture: inv.fatture || [] });
+  out.meteo = {};
+  if (S.meteo) {
+    const cfg = Object.assign({}, S.meteo); delete cfg.months; delete cfg.manual;
+    out.impostazioni.meteo = clean({ cfg });
+    // dati orari della stazione: un documento per mese (le ore come testo, per stare nei limiti del database)
+    Object.keys(S.meteo.months || {}).forEach((mo) => { out.meteo[mo] = { ore: JSON.stringify(S.meteo.months[mo]) }; });
+  }
   return out;
 }
 function applyAll() {

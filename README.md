@@ -27,6 +27,7 @@ Ruoli:
 | `index.html` | L'app |
 | `js/mappa.js` | Mappa satellitare, posizione GPS, foto aeree importate |
 | `js/inventario.js` | Magazzino: articoli, lotti, movimenti, avvisi |
+| `js/meteo.js` | Meteo: previsione, stima del passato, dati della stazione |
 | `js/sync.js` | Account, aziende, inviti e sincronizzazione con Firebase |
 | `js/config.js` | Configurazione del progetto Firebase (da compilare) |
 | `firestore.rules` | Regole di sicurezza del database |
@@ -41,6 +42,16 @@ Ruoli:
 - **Registra perimetro**: si cammina lungo il confine e l'app crea l'area. Usa solo i punti con precisione entro 15 m.
 - **Precisione**: un telefono sbaglia in genere di 3-5 m. Per il singolo ceppo serve un ricevitore GNSS RTK: su Android si collega come "posizione fittizia" dalle opzioni sviluppatore, su iPhone con i ricevitori compatibili.
 - Il GPS funziona con l'app aperta e lo schermo acceso: l'app tiene lo schermo sveglio finché il GPS è attivo.
+
+## Meteo
+
+- **Previsione**: MET Norway (gratuita anche per uso commerciale, senza chiavi) oppure Open-Meteo (gratuita solo per uso non commerciale). Si sceglie in Trattamenti o Vigna → Difesa → Meteo → Impostazioni.
+- **Passato**: i dati della stazione aziendale importati da file; dove mancano, una stima Open-Meteo (disattivabile).
+- **Stazione (FieldClimate e simili)**: esporta i dati in CSV o Excel e importali. L'app riconosce le colonne (data, temperatura, umidità, pioggia, bagnatura fogliare, vento), le ricorda per i file successivi, unisce i periodi e porta i dati a passo orario.
+- **Cosa fa con i dati**: compila la regola dei tre 10 e i rischi delle malattie, calcola la pioggia caduta dopo ogni trattamento (dilavamento oltre 20 mm), trova la finestra utile per trattare (almeno 6 ore asciutte di giorno con vento sotto 3 m/s) e avvisa se con lo zolfo sono previste massime sopra i 30 °C.
+- **Foglia bagnata**: dal sensore della stazione se c'è, altrimenti stimata dalle ore con umidità sopra il 90% o con pioggia.
+- Se scrivi a mano un valore nella difesa, l'app non lo sovrascrive finché non tocchi "Usa i dati automatici".
+- La posizione è il centro delle parcelle sulla mappa satellitare, oppure quella del telefono.
 
 ## Magazzino
 
