@@ -9,7 +9,7 @@ const ROLES = { titolare: "Titolare", collaboratore: "Collaboratore", lettura: "
 const AKEY = "qo-azienda";
 const META = ["modificato", "modificatoDa"];
 
-const Sync = (window.QOSync = { active: false, push: () => {}, userName: () => "" });
+const Sync = (window.QOSync = { active: false, push: () => {}, userName: () => "", recent: () => [] });
 let A, F, auth, db, user = null;
 let aziende = [], inviti = [], invitiAzienda = [], attivita = [];
 let current = null;
@@ -28,6 +28,7 @@ const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 const role = () => (current && user ? (current.data.membri || {})[user.uid] || null : null);
 const myName = () => (user ? user.displayName || (user.email || "").split("@")[0] : "");
 Sync.userName = () => (Sync.active ? myName() : "");
+Sync.recent = () => (Sync.active ? attivita : []);
 const QO = () => window.QO;
 const errText = (e) => {
   const c = (e && e.code) || "";
@@ -120,7 +121,7 @@ function enter(az, upload) {
     }, (e) => { msg = "Accesso ai dati negato: " + errText(e); refreshStatus(); renderSheet(); }));
   });
   azSubs.push(F.onSnapshot(F.query(F.collection(db, "aziende", az.id, "attivita"), F.orderBy("quando", "desc"), F.limit(15)), (snap) => {
-    attivita = snap.docs.map((d) => d.data()); if (sheetOpen) renderSheet();
+    attivita = snap.docs.map((d) => d.data()); if (sheetOpen) renderSheet(); else QO().render();
   }, () => {}));
   watchInvites();
   refreshStatus(); renderSheet();

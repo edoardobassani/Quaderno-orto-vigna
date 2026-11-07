@@ -550,6 +550,8 @@
       var a = ha(plot); return a ? -m.qty * it.cu / 100 / a : null;
     },
     replace: replace, barbHtml: barbHtml, barbOptions: barbOptions,
+    alertsList: function () { return alerts().map(function (a) { return { lvl: a.lvl, t: a.t, d: a.d, id: a.it.id }; }); },
+    open: function (id) { V.item = id; V.form = null; V.inv = null; V.unknown = null; },
     alertsCount: function () { return alerts().filter(function (a) { return a.lvl === 2; }).length; }
   };
   seed();

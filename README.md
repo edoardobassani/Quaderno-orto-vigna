@@ -52,6 +52,12 @@ Ruoli:
 - **Foglia bagnata**: dal sensore della stazione se c'è, altrimenti stimata dalle ore con umidità sopra il 90% o con pioggia.
 - Se scrivi a mano un valore nella difesa, l'app non lo sovrascrive finché non tocchi "Usa i dati automatici".
 - La posizione è il centro delle parcelle sulla mappa satellitare, oppure quella del telefono.
+- **Incubazione della peronospora** (Vigna → Difesa → Meteo): un evento parte da solo dopo una pioggia di almeno 10 mm in un giorno, con media di almeno 10 °C e vigne in vegetazione (dalla fenologia; senza fenologia, aprile-settembre). Si può aggiungere o ignorare un evento a mano. Ogni giorno si somma la quota della tabella di Goidanich per temperatura e umidità medie; al 100% l'incubazione è finita e sono possibili le macchie d'olio. Con la previsione si stima la data di fine. Avvisi dall'80% e a fine incubazione, anche nella sezione Oggi.
+  Valori della tabella come riportati in Pérez-Expósito et al., *VineSens*, Sensors 2017, 17(3), 465, tabella 1. Due valori sembrano refusi (16,50 °C sotto il 75% = 6,3; 18,25 °C dal 75% = 15,2) e sono tenuti come nella fonte. Sotto 10 °C lo sviluppo si considera fermo, tra 10 e 12 °C vale il valore dei 12 °C, da 25 °C quello dei 25 °C.
+
+## Oggi
+
+La sezione che si apre all'avvio: meteo in breve con la finestra utile per trattare, trattamenti in scadenza con "Fatto", avvisi di tutte le sezioni (malattie, incubazione, carenze, rame, magazzino, fallanze), stato delle vigne, attività dei colleghi e azioni rapide. La Libreria si apre da Trattamenti o dalle azioni rapide.
 
 ## Magazzino
 

@@ -332,6 +332,7 @@ function lastFor(plot,dis){
 function risks(){
   var w=S.weather,out=[];
   S.plots.forEach(function(plot){
+    if(plot.vine&&plot.vine.phen&&plot.vine.phen.length){var lst=plot.vine.phen[plot.vine.phen.length-1].st;if(lst==="riposo"||lst==="cadu")return}
     var fams={};Object.keys(cropsIn(plot)).forEach(function(c){fams[CROPS[c].fam]=1});
     if(!Object.keys(fams).length)return;
     var open=plot.type==="campo"||plot.type==="vigna";
@@ -377,7 +378,7 @@ function bindPan(svg,key,onTap){
 }
 
 /* ---------- stato UI ---------- */
-var UI={tab:"mappa",draw:null,form:null,mode:"pianta",confirm:null,planForm:null};
+var UI={tab:"oggi",draw:null,form:null,mode:"pianta",confirm:null,planForm:null};
 function setTab(t){UI.tab=t;UI.confirm=null;render();window.scrollTo(0,0)}
 
 /* ---------- render ---------- */
@@ -389,12 +390,13 @@ var ICON={
 };
 ICON.vigna='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="10" r="2.2"/><circle cx="14" cy="10" r="2.2"/><circle cx="11.5" cy="14" r="2.2"/><circle cx="11.5" cy="18.5" r="2.2"/><path d="M12 7c0-2 1.5-3.5 4-4M12 7c-1.5-1-3.5-1.2-5-.5"/></svg>';
 ICON.magazzino='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l9-5 9 5v10l-9 5-9-5Z"/><path d="M3 8l9 5 9-5M12 13v10"/></svg>';
-var TABS=[["mappa","Mappa"],["impianto","Orto"],["vigna","Vigna"],["trattamenti","Trattam."],["magazzino","Magazz."],["libreria","Libreria"]];
+ICON.oggi='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>';
+var TABS=[["oggi","Oggi"],["mappa","Mappa"],["impianto","Orto"],["vigna","Vigna"],["trattamenti","Trattam."],["magazzino","Magazz."]];
 function renderNav(){
   var due=S.plans.filter(function(p){var d=nextDue(p);return d&&d<=today()}).length;
   $("#nav").innerHTML=TABS.map(function(t){return '<a href="#" data-tab="'+t[0]+'"'+(UI.tab===t[0]?' aria-current="page"':'')+'>'+ICON[t[0]]+t[1]+(t[0]==="trattamenti"&&due?' <span class="badge b-warn">'+due+'</span>':'')+(t[0]==="magazzino"&&window.QOInv&&window.QOInv.alertsCount()?' <span class="badge b-bad">'+window.QOInv.alertsCount()+'</span>':'')+'</a>'}).join("");
 }
-function render(){renderNav();var a=$("#app");a.innerHTML=({mappa:vMappa,impianto:vImpianto,vigna:vVigna,trattamenti:vTratt,magazzino:function(){return window.QOInv?window.QOInv.view():'<div class="top"><h1>Magazzino</h1></div><div class="panel">Caricamento…</div>'},libreria:vLib})[UI.tab]();afterRender()}
+function render(){renderNav();var a=$("#app");a.innerHTML=({oggi:vOggi,mappa:vMappa,impianto:vImpianto,vigna:vVigna,trattamenti:vTratt,magazzino:function(){return window.QOInv?window.QOInv.view():'<div class="top"><h1>Magazzino</h1></div><div class="panel">Caricamento…</div>'},libreria:vLib})[UI.tab]();afterRender()}
 
 var FILL={serra:"var(--serra-fill)",campo:"var(--campo-fill)",tunnel:"var(--tunnel-fill)",vigna:"var(--vigna-fill)"};
 var STROKE={serra:"var(--serra)",campo:"var(--accent)",tunnel:"var(--tunnel)",vigna:"var(--vigna)"};
@@ -518,7 +520,7 @@ function impTap(pt){
 
 function vTratt(){
   var t=today(),w=S.weather,R=risks();
-  var h='<div class="top"><div><div class="eyebrow">'+fmt(t)+'</div><h1>Trattamenti</h1></div><button class="btn primary" data-act="newPlan">Nuovo</button></div>';
+  var h='<div class="top"><div><div class="eyebrow">'+fmt(t)+'</div><h1>Trattamenti</h1></div><div class="row"><button class="btn sm" data-act="homeGo" data-v="libreria">Libreria</button><button class="btn primary" data-act="newPlan">Nuovo</button></div></div>';
   /* striscia 7 giorni */
   h+='<div class="strip">';for(var i=0;i<7;i++){var d=addDays(t,i),has=S.plans.some(function(pl){var n=nextDue(pl);return n&&(i===0?n<=d:iso(n)===iso(d))});h+='<div class="day'+(i===0?' today':'')+'"><span>'+GG[d.getDay()]+'</span><b>'+d.getDate()+'</b><i style="background:'+(has?(i===0?'var(--warn)':'var(--accent)'):'transparent')+'"></i></div>'}h+='</div>';
   if(UI.planForm)h+=planFormHtml();
@@ -586,6 +588,47 @@ function vLib(){
   return h;
 }
 
+
+/* =================== OGGI (home) =================== */
+function homeAlerts(){
+  var t=today(),A=[];
+  risks().forEach(function(r){if(r.prot)return;A.push({lvl:r.lvl===2?2:1,t:DIS[r.dis].n+' · '+r.plot.name,d:r.why+(r.washed?', trattamento dilavato':''),go:r.plot.vine?'vigna:difesa':'trattamenti'})});
+  var w=S.vw||{};if(window.QOMeteo&&window.QOMeteo.ready()&&w.t>=10&&w.rain>=10&&w.shoot>=10)A.push({lvl:2,t:'Condizioni per le infezioni primarie di peronospora',d:'Regola dei tre 10 soddisfatta: proteggi le vigne prima della prossima pioggia',go:'vigna:difesa'});
+  S.plots.forEach(function(p){var hb=harvestBlock(p);if(hb)A.push({lvl:1,t:'Non raccogliere in '+p.name+' fino a '+fmt(hb.end),d:'Tempo di carenza di '+PRODUCTS[hb.prod].n,go:p.vine?'vigna:registro':'trattamenti'});
+    var kg=copperYear(p);if(kg>=3)A.push({lvl:kg>=4?2:1,t:'Rame in '+p.name+': '+num(kg,2)+' kg/ha nel '+t.getFullYear(),d:kg>=4?'Superata la media di 4 kg/ha l\'anno':'Vicino alla media di 4 kg/ha l\'anno',go:p.vine?'vigna:difesa':'trattamenti'})});
+  if(window.QOMeteo)window.QOMeteo.incAlerts().forEach(function(a){A.push({lvl:a.lvl,t:a.t,d:a.d,go:'vigna:difesa'})});
+  if(window.QOInv)window.QOInv.alertsList().forEach(function(a){A.push({lvl:a.lvl,t:a.t,d:a.d,go:'magazzino',id:a.id})});
+  vignes().forEach(function(p){var st=vineStats(p);if(st.f)A.push({lvl:0,t:st.f+(st.f===1?' fallanza':' fallanze')+' da rimpiazzare in '+p.name,d:'Le trovi segnate sulla mappa dei ceppi',go:'vigna:parcelle',id:p.id})});
+  return A.sort(function(a,b){return b.lvl-a.lvl});
+}
+function vOggi(){
+  var t=today(),hr=new Date().getHours(),who=(window.QOSync&&window.QOSync.userName&&window.QOSync.userName())||'';
+  var h='<div class="top"><div><div class="eyebrow">'+fmt(t)+'</div><h1>'+(hr<12?'Buongiorno':hr<18?'Buon pomeriggio':'Buonasera')+(who?', '+esc(who.split(' ')[0]):'')+'</h1></div></div>';
+  if(window.QOMeteo)h+=window.QOMeteo.briefHtml();
+  /* trattamenti */
+  var list=S.plans.map(function(pl){return {pl:pl,d:nextDue(pl)}}).filter(function(o){return o.d&&plotById(o.pl.plot)}).sort(function(a,b){return a.d-b.d});
+  var due=list.filter(function(o){return o.d<=t}),soon=list.filter(function(o){return o.d>t&&o.d<=addDays(t,7)});
+  h+='<div class="row" style="justify-content:space-between;margin:16px 0 8px"><h2>Da fare oggi</h2><button class="btn sm" data-act="homeGo" data-v="trattamenti">Tutti i trattamenti</button></div>';
+  if(!due.length)h+='<div class="panel small">Nessun trattamento in scadenza oggi.'+(soon.length?' Nei prossimi 7 giorni: '+soon.length+'.':'')+'</div>';
+  else{h+='<div class="list">';due.forEach(function(o){var late=diffDays(t,o.d),plot=plotById(o.pl.plot);h+='<div class="panel row" style="flex-wrap:nowrap;justify-content:space-between"><div style="min-width:0"><b>'+PRODUCTS[o.pl.prod].n+'</b><br><span class="small muted">'+esc(plot.name)+' · '+(o.pl.done.length+1)+'° passaggio di '+o.pl.count+'</span></div><div class="row" style="flex-wrap:nowrap"><span class="badge '+(late>0?'b-bad':'b-warn')+'">'+(late>0?'da '+late+(late===1?' giorno':' giorni'):'oggi')+'</span><button class="btn sm primary" data-act="homeDone" data-id="'+o.pl.id+'">Fatto</button></div></div>'});h+='</div>';
+    if(soon.length)h+='<p class="small muted">Nei prossimi 7 giorni: '+soon.map(function(o){return PRODUCTS[o.pl.prod].n.replace(/ \(.+\)/,"")+' '+fmtRel(o.d)}).join(' · ')+'</p>'}
+  /* avvisi */
+  var A=homeAlerts();
+  h+='<h2 style="margin:16px 0 8px">Avvisi</h2>';
+  if(!A.length)h+='<div class="panel small" style="background:var(--ok-bg);color:var(--accent)">Nessun avviso: tutto in ordine.</div>';
+  else{h+='<div class="list">';A.slice(0,UI.homeAll?50:6).forEach(function(a){var bg=a.lvl===2?'var(--bad-bg)':a.lvl===1?'var(--warn-bg)':'var(--surface)',fg=a.lvl===2?'var(--bad)':a.lvl===1?'var(--warn)':'var(--ink)';h+='<button class="item" data-act="homeGo" data-v="'+a.go+'"'+(a.id?' data-id="'+a.id+'"':'')+' style="display:block;background:'+bg+';color:'+fg+'"><b>'+esc(a.t)+'</b><br><span class="small">'+esc(a.d)+'</span></button>'});h+='</div>';
+    if(A.length>6)h+='<div style="margin-top:8px"><button class="btn sm" data-act="homeAll">'+(UI.homeAll?'Mostra meno':'Mostra tutti ('+A.length+')')+'</button></div>'}
+  /* vigne */
+  var vs=vignes();
+  if(vs.length){h+='<h2 style="margin:16px 0 8px">Vigne</h2><div class="list">';vs.forEach(function(p){var sg=stageOf(p),last=lastFor(p,"peronospora"),cover=last?addDays(last.d,last.pl.every):null,rs=last&&window.QOMeteo?window.QOMeteo.rainSince(last.d):null;
+    h+='<button class="item" data-act="homeGo" data-v="vigna:parcelle" data-id="'+p.id+'"><span class="swatch" style="background:var(--vigna-fill);border-color:var(--vigna)"></span><span class="grow"><b>'+esc(p.name)+'</b><br><span class="small muted">'+(sg?STN[sg.st][1]:'fase non registrata')+' · '+(cover&&cover>=t?'coperta fino a '+fmt(cover):last?'ultimo antiperonosporico '+fmt(last.d):'nessun antiperonosporico')+(rs!=null?' · '+num(rs)+' mm da allora':'')+'</span></span></button>'});h+='</div>'}
+  /* attività dei colleghi */
+  var rec=window.QOSync&&window.QOSync.recent?window.QOSync.recent():[];
+  if(rec.length){h+='<h2 style="margin:16px 0 8px">Attività recenti</h2><div class="panel stack" style="gap:6px">'+rec.slice(0,5).map(function(a){return '<div class="small"><b>'+esc(a.da)+'</b> · '+esc(a.testo)+(a.quando&&a.quando.toDate?' <span class="muted">· '+a.quando.toDate().toLocaleString("it-IT",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})+'</span>':'')+'</div>'}).join("")+'</div>'}
+  /* azioni rapide */
+  h+='<h2 style="margin:16px 0 8px">Azioni rapide</h2><div class="grid2">'+[["mappa","Dove sono in vigna"],["trattamenti:nuovo","Programma trattamento"],["magazzino","Magazzino e acquisti"],["vigna:matur","Campionamento"],["vigna:botte","Calcolo botte"],["libreria","Libreria prodotti"]].map(function(x){return '<button class="btn" data-act="homeGo" data-v="'+x[0]+'">'+x[1]+'</button>'}).join("")+'</div>';
+  return h;
+}
 /* =================== VIGNA =================== */
 var STAGES=[["riposo","Riposo vegetativo",0],["germ","Germogliamento",9],["foglie","Foglie distese",15],["grapp","Grappoli visibili",53],["fior","Piena fioritura",65],["alleg","Allegagione",71],["chius","Chiusura grappolo",79],["invai","Invaiatura",83],["matur","Maturazione",89],["cadu","Caduta foglie",93]];
 var STN={};STAGES.forEach(function(s){STN[s[0]]=s});
@@ -721,7 +764,7 @@ function vDifesa(){
   h+='<div class="grid3"><label class="f">Temp. media (°C)<input id="vwT" type="number" inputmode="decimal" value="'+w.t+'"></label><label class="f">Pioggia 24-48 h (mm)<input id="vwRain" type="number" inputmode="decimal" value="'+w.rain+'"></label><label class="f">Germogli (cm)<input id="vwShoot" type="number" inputmode="decimal" value="'+w.shoot+'"></label></div>';
   h+=ck(c1,"Temperatura di almeno 10 °C")+ck(c2,"Almeno 10 mm di pioggia in 24-48 ore")+ck(c3,"Germogli lunghi almeno 10 cm");
   h+=all?'<div class="panel" style="background:var(--bad-bg);color:var(--bad)"><b>Ci sono le condizioni per le infezioni primarie.</b><br><span class="small">Le parcelle non coperte possono infettarsi con questa pioggia. Proteggi prima delle prossime piogge.</span></div>':'<div class="panel" style="background:var(--ok-bg);color:var(--accent)"><b>Condizioni per le infezioni primarie non raggiunte.</b></div>';
-  h+='<span class="small muted">Regola empirica usata nei bollettini per l\'inizio stagione. Il calcolo dell\'incubazione (tabelle di Goidanich) è il prossimo passo.</span></div>';
+  h+='<span class="small muted">Regola empirica usata nei bollettini per l\'inizio stagione. L\'incubazione delle infezioni la trovi nella scheda Meteo qui sopra.</span></div>';
   h+='<h2 style="margin:18px 0 8px">Stato delle parcelle</h2><div class="list">';
   vs.forEach(function(p){var last=lastFor(p,"peronospora"),cover=last?addDays(last.d,last.pl.every):null,ok=cover&&cover>=today(),kg=copperYear(p),pc=Math.min(100,kg/4*100),sg=stageOf(p),hb=harvestBlock(p),n=S.plans.filter(function(x){return x.plot===p.id&&x.prod==="rame"}).reduce(function(s,x){return s+x.done.filter(function(d){return parse(d).getFullYear()===y}).length},0);
     h+='<div class="panel stack" style="gap:8px"><div class="row" style="justify-content:space-between"><b>'+esc(p.name)+'</b><span class="badge '+(ok?'b-ok':'b-n')+'">'+(ok?'coperto fino a '+fmt(cover):last?'ultimo antiperonosporico '+fmt(last.d):'nessun trattamento')+'</span></div>';
@@ -863,6 +906,13 @@ document.addEventListener("click",function(e){
     goImp:function(){UI.tab="impianto"},
     delPlot:function(){if(UI.confirm!=="plot"){UI.confirm="plot";return}S.plans=S.plans.filter(function(p){return p.plot!==S.sel});S.plots=S.plots.filter(function(p){return p.id!==S.sel});S.sel=S.plots[0]&&S.plots[0].id;UI.confirm=null;delete VIEWS.map;save()},
     mode:function(){UI.mode=b.getAttribute("data-m")},
+    homeAll:function(){UI.homeAll=!UI.homeAll},
+    homeGo:function(){var v=(b.getAttribute("data-v")||"").split(":"),tab=v[0],sub=v[1];UI.tab=tab;UI.confirm=null;
+      if(tab==="vigna"){UI.vtab=sub||"parcelle";UI.vedit=null;if(id)UI.vsel=id}
+      if(tab==="trattamenti"&&sub==="nuovo"){var P=PRODUCTS.rame;UI.planForm={prod:"rame",plot:S.sel||(S.plots[0]&&S.plots[0].id),start:iso(today()),every:P.every[0],count:3,rain:true,cu:0.6}}
+      if(tab==="magazzino"&&id&&window.QOInv)window.QOInv.open(id);
+      window.scrollTo(0,0)},
+    homeDone:function(){var pl=S.plans.find(function(p){return p.id===id});if(!pl)return;UI.tab="trattamenti";if(window.QOInv&&window.QOInv.needsForm(pl)){UI.doneFor=pl.id;return}pl.done.push(iso(today()));save();var c=carenzaFor(pl.prod,plotById(pl.plot)).days;toast(c?"Registrato. Non raccogliere fino a "+fmt(addDays(today(),c)):"Registrato")},
     crop:function(){S.cropSel=b.getAttribute("data-c");UI.mode="pianta";save()},
     fill:function(){var p=plotById(S.sel),n=fill(p,S.cropSel);save();toast(n?n.toLocaleString("it-IT")+" piante di "+CROPS[S.cropSel].n.toLowerCase()+" aggiunte":"Nessuno spazio libero per questa coltura")},
     clear:function(){if(UI.confirm!=="clear"){UI.confirm="clear";return}plotById(S.sel).plants=[];UI.confirm=null;save()},

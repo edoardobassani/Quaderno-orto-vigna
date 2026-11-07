@@ -203,6 +203,7 @@
     else if (sm) h += '<span class="small muted">Difesa compilata in automatico: media ' + (sm.t != null ? n1(sm.t) + ' °C' : '–') + ', pioggia 48 h ' + n1(sm.rain48) + ' mm, foglia bagnata ' + sm.wet + ' h' + (sm.lwReal ? ' (sensore)' : ' (stimata dall\'umidità)') + '.</span>';
     if (V.msg) h += '<span class="small" style="color:var(--warn)">' + esc(V.msg) + '</span>';
     h += '<span class="small muted">Dati: <a href="https://www.met.no/en" target="_blank" rel="noopener">MET Norway</a> e <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo.com</a>, licenza CC BY 4.0.</span>';
+    if (ctx === "vigna") h += incHtml();
     if (V.open) h += settingsHtml();
     return h + '</div>';
   }
@@ -345,6 +346,20 @@
       case "locPlots": m.loc = null; Q.save(); refresh(true).then(function () { Q.render(); }); break;
       case "impOk": commitImport(); return;
       case "impCancel": V.imp = null; break;
+      case "incAdd": V.incForm = !V.incForm; break;
+      case "incSave": {
+        var dv = (document.getElementById("meIncDate") || {}).value, mm = parseFloat(String((document.getElementById("meIncMm") || {}).value || "").replace(",", "."));
+        if (!dv) { Q.toast("Scegli la data"); return; }
+        m.events = (m.events || []).concat({ id: Q.uid(), date: dv, mm: isFinite(mm) ? mm : 0 }); m.hidden = (m.hidden || []).filter(function (x) { return x !== dv; });
+        V.incForm = false; Q.save(); Q.toast("Evento aggiunto"); break;
+      }
+      case "incRows": { var ii = +b.getAttribute("data-i"); V.incRows = V.incRows === ii ? null : ii; break; }
+      case "incDel": {
+        var eid = b.getAttribute("data-id"), dd = b.getAttribute("data-d");
+        if (eid) m.events = (m.events || []).filter(function (x) { return x.id !== eid; });
+        else m.hidden = (m.hidden || []).concat(dd);
+        V.incRows = null; Q.save(); Q.toast("Evento ignorato"); break;
+      }
       case "clearSt": if (!V.confirm) { V.confirm = true; break; } V.confirm = false; m.months = {}; m.st = null; Q.save(); apply(); Q.toast("Dati della stazione cancellati"); break;
     }
     Q.render();
@@ -360,8 +375,124 @@
   window.addEventListener("online", function () { refresh(false).then(function (ok) { if (ok) Q.render(); }); });
   setInterval(function () { if (document.visibilityState === "visible") refresh(false).then(function (ok) { if (ok) Q.render(); }); }, 15 * 60 * 1000);
 
+  function briefHtml() {
+    var loc = location();
+    if (!loc) return '<div class="panel small" style="margin-top:4px">Per il meteo automatico posiziona gli appezzamenti sulla mappa, oppure tocca <button class="btn sm" data-me="here">Usa la mia posizione</button></div>';
+    if (!cache) { refresh(false).then(function (ok) { if (ok) Q.render(); }); }
+    var ds = days(4); if (!ds.some(function (d) { return d.max != null; })) return '<div class="panel small muted">' + (navigator.onLine ? 'Scarico i dati meteo…' : 'Meteo non disponibile senza connessione.') + '</div>';
+    var d0 = ds[0], w = windowToTreat(), sm = summary();
+    var h = '<button class="item" data-act="homeGo" data-v="vigna:difesa" style="display:block"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><span><b style="font-family:var(--f-display);font-size:26px">' + (d0.max != null ? Math.round(d0.max) + '°' : '–') + '</b> <span class="muted">/ ' + (d0.min != null ? Math.round(d0.min) + '°' : '–') + '</span></span><span class="mono small">' + (d0.p != null ? n1(d0.p) + ' mm oggi' : '') + '</span></div>';
+    h += '<div class="row small" style="margin-top:4px;gap:12px">' + ds.slice(1).map(function (d) { return '<span>' + ["dom", "lun", "mar", "mer", "gio", "ven", "sab"][d.d.getDay()] + ' <b class="mono">' + (d.max != null ? Math.round(d.max) + '°' : '–') + '</b>' + (d.p >= 0.5 ? ' · ' + n1(d.p) + ' mm' : '') + '</span>'; }).join("") + '</div>';
+    if (w && !w.none) h += '<div class="small" style="margin-top:6px;color:var(--accent)"><b>Finestra utile:</b> ' + fmtH(w.a) + ' – ' + fmtH(w.b) + (w.nextRain ? ', poi pioggia ' + Q.fmt(w.nextRain.d) : '') + '</div>';
+    else if (w && w.none) h += '<div class="small" style="margin-top:6px;color:var(--warn)">Nessuna finestra asciutta di 6 ore nei prossimi 5 giorni</div>';
+    if (sm) h += '<div class="small muted" style="margin-top:4px">Ultime 24 h: media ' + (sm.t != null ? n1(sm.t) + ' °C' : '–') + ', foglia bagnata ' + sm.wet + ' h, pioggia 48 h ' + n1(sm.rain48) + ' mm</div>';
+    return h + '</button>';
+  }
+
+
+  /* ---------------- incubazione della peronospora (tabella di Goidanich) ----------------
+     Quota giornaliera di incubazione (%) per temperatura media del giorno, a passi di 0,25 °C,
+     con umidità media sotto il 75% e dal 75% in su. Valori come riportati in:
+     Pérez-Expósito et al., "VineSens: An Eco-Smart Decision-Support Viticulture System", Sensors 2017, 17(3), 465, tabella 1.
+     Due valori sembrano refusi (16,50 °C sotto 75% = 6,3; 18,25 °C dal 75% = 15,2): tenuti come nella fonte. */
+  var GOID = {
+    "12.00": [0, 5.25], "12.25": [4.4, 5.75], "12.50": [4.7, 6.2], "12.75": [5, 6.7],
+    "13.00": [5.3, 7.1], "13.25": [5.7, 7.7], "13.50": [6, 8], "13.75": [6.4, 8.5],
+    "14.00": [6.6, 9], "14.25": [6.8, 9.4], "14.50": [7.1, 9.7], "14.75": [7.3, 10.2],
+    "15.00": [7.6, 10.6], "15.25": [7.8, 10.8], "15.50": [8.1, 11.1], "15.75": [8.3, 11.3],
+    "16.00": [8.5, 11.7], "16.25": [9, 12], "16.50": [6.3, 12.5], "16.75": [9.6, 12.9],
+    "17.00": [10, 13.25], "17.25": [10.3, 13.6], "17.50": [10.5, 14.3], "17.75": [10.75, 14.75],
+    "18.00": [11.1, 15.3], "18.25": [11.48, 15.2], "18.50": [11.7, 16], "18.75": [12.1, 16.3],
+    "19.00": [12.5, 16.6], "19.25": [12.9, 17.5], "19.50": [13.4, 18.3], "19.75": [13.7, 19.3],
+    "20.00": [14.2, 20], "20.25": [14.5, 20.5], "20.50": [14.8, 21], "20.75": [15, 21.5],
+    "21.00": [15.3, 22.2], "21.25": [15.7, 22.2], "21.50": [16, 22.2], "21.75": [16.3, 22.2],
+    "22.00": [16.6, 22.2], "22.25": [17, 22.2], "22.50": [17.3, 23.5], "22.75": [17.7, 24.4],
+    "23.00": [18.1, 25], "23.25": [18.1, 25], "23.50": [18.1, 25], "23.75": [18.1, 25],
+    "24.00": [18.1, 25], "24.25": [17.7, 24.3], "24.50": [17.3, 23.5], "24.75": [17, 23.2],
+    "25.00": [16.6, 22.2]
+  };
+  var INC_MIN_RAIN = 10, INC_MIN_T = 10, INC_LOOKBACK = 30;
+  /* quota del giorno: sotto 10 °C sviluppo fermo; tra 10 e 12 °C valore dei 12 °C (prudenza); da 25 °C valore dei 25 °C */
+  function goidShare(t, rh) {
+    if (t == null || t < INC_MIN_T) return 0;
+    var q = t >= 25 ? 25 : t < 12 ? 12 : Math.floor(t * 4) / 4, row = GOID[q.toFixed(2)];
+    return row ? row[rh != null && rh >= 75 ? 1 : 0] : 0;
+  }
+  function dayStats(d) {
+    var l = range(d, 24), withT = l.filter(function (x) { return x.r && x.r.T != null; }), withRH = l.filter(function (x) { return x.r && x.r.RH != null; });
+    if (withT.length < 18) return null;
+    return {
+      t: withT.reduce(function (s, x) { return s + x.r.T; }, 0) / withT.length,
+      rh: withRH.length ? withRH.reduce(function (s, x) { return s + x.r.RH; }, 0) / withRH.length : null,
+      p: sum(l, function (r) { return r.P; }),
+      fc: l.some(function (x) { return x.r && x.r.src === "previsione"; })
+    };
+  }
+  /* la vigna è in vegetazione con germogli di almeno 10 cm? (dalla fenologia; senza dati, aprile-settembre) */
+  var ACTIVE = { foglie: 1, grapp: 1, fior: 1, alleg: 1, chius: 1, invai: 1, matur: 1 };
+  function vegetating(date) {
+    var vines = S().plots.filter(function (p) { return p.vine; }), any = false, known = false;
+    var di = Q.iso(date);
+    vines.forEach(function (p) {
+      var ph = (p.vine.phen || []).filter(function (x) { return x.date <= di; }); if (!ph.length) return;
+      known = true; if (ACTIVE[ph[ph.length - 1].st]) any = true;
+    });
+    if (known) return any;
+    var m = date.getMonth(); return m >= 3 && m <= 8;
+  }
+  function incubations() {
+    if (!S().plots.some(function (p) { return p.vine; })) return [];
+    var m = M(), today0 = new Date(); today0.setHours(0, 0, 0, 0);
+    var starts = [];
+    for (var i = INC_LOOKBACK; i >= 1; i--) {
+      var d = addH(today0, -24 * i), ds = dayStats(d);
+      if (ds && ds.p >= INC_MIN_RAIN && ds.t >= INC_MIN_T && vegetating(d)) starts.push({ d: d, mm: Math.round(ds.p), auto: true });
+    }
+    (m.events || []).forEach(function (e) { var d = Q.parse(e.date); d.setHours(0, 0, 0, 0); if (today0 - d <= INC_LOOKBACK * 864e5 && !starts.some(function (s) { return Q.iso(s.d) === e.date; })) starts.push({ d: d, mm: e.mm, auto: false, id: e.id }); });
+    (m.hidden || []).forEach(function (h) { starts = starts.filter(function (s) { return !(s.auto && Q.iso(s.d) === h); }); });
+    starts.sort(function (a, b) { return a.d - b.d; });
+    return starts.map(function (s) {
+      var tot = 0, rows = [], end = null, endFc = false, missing = 0;
+      for (var k = 1; k <= 40 && !end; k++) {
+        var day = addH(s.d, 24 * k), ds = dayStats(day);
+        if (!ds) { if (day < today0) { missing++; continue; } break; }
+        var q = goidShare(ds.t, ds.rh); tot += q;
+        rows.push({ d: day, t: ds.t, rh: ds.rh, q: q, tot: tot, fc: ds.fc || day >= today0 });
+        if (tot >= 100) { end = day; endFc = ds.fc || day >= today0; }
+      }
+      var now = rows.filter(function (r) { return r.d < today0; }), done = now.length ? now[now.length - 1].tot : 0;
+      return { start: s.d, mm: s.mm, auto: s.auto, id: s.id, pct: Math.min(100, Math.round(done)), end: end, endFc: endFc, rows: rows, missing: missing };
+    }).filter(function (e) { return !e.end || e.endFc || (today0 - e.end) / 864e5 <= 7; });
+  }
+  function incAlerts() {
+    return incubations().map(function (e) {
+      var label = "pioggia del " + Q.fmt(e.start) + (e.mm ? " (" + e.mm + " mm)" : "");
+      if (e.end && !e.endFc) return { lvl: 2, t: "Peronospora: incubazione finita, " + label, d: "Macchie d'olio possibili dal " + Q.fmt(e.end) + ": controlla le vigne e proteggi prima della prossima pioggia" };
+      if (e.pct >= 80) return { lvl: e.pct >= 90 ? 2 : 1, t: "Peronospora: incubazione al " + e.pct + "%, " + label, d: e.end ? "Macchie d'olio attese il " + Q.fmt(e.end) : "Fine incubazione nei prossimi giorni" };
+      return null;
+    }).filter(Boolean);
+  }
+  function incHtml() {
+    var list = incubations(), m = M();
+    var h = '<div class="sep"></div><div class="row" style="justify-content:space-between"><h3>Incubazione peronospora</h3><button class="btn sm" data-me="incAdd">' + (V.incForm ? 'Chiudi' : 'Aggiungi evento') + '</button></div>';
+    if (V.incForm) h += '<div class="grid2"><label class="f">Data della pioggia<input id="meIncDate" type="date" value="' + Q.iso(Q.today()) + '"></label><label class="f">Pioggia (mm)<input id="meIncMm" type="number" inputmode="decimal" step="any"></label></div><div><button class="btn sm primary" data-me="incSave">Aggiungi</button></div>';
+    if (!list.length) return h + '<span class="small muted">Nessuna incubazione in corso. Un evento parte da solo dopo una pioggia di almeno ' + INC_MIN_RAIN + ' mm in un giorno, con media di almeno ' + INC_MIN_T + ' °C e vigne in vegetazione.</span>';
+    list.forEach(function (e, i) {
+      var c = e.end && !e.endFc ? "x" : e.pct >= 80 ? (e.pct >= 90 ? "x" : "w") : "";
+      h += '<div class="panel stack" style="gap:6px;padding:10px 12px;background:var(--surface-2)"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><b>Pioggia del ' + Q.fmt(e.start) + (e.mm ? ' · ' + e.mm + ' mm' : '') + '</b><span class="badge ' + (c === "x" ? "b-bad" : c === "w" ? "b-warn" : "b-n") + '">' + (e.end && !e.endFc ? 'finita' : e.pct + '%') + '</span></div><div class="bar"><span class="' + c + '" style="width:' + (e.end && !e.endFc ? 100 : e.pct) + '%"></span></div>';
+      h += '<span class="small">' + (e.end ? (e.endFc ? 'Fine incubazione prevista il <b>' + Q.fmt(e.end) + '</b> (con la previsione meteo)' : 'Incubazione finita il <b>' + Q.fmt(e.end) + '</b>: possibili macchie d\'olio') : 'Fine non ancora stimabile con i dati disponibili') + (e.missing ? '. Mancano i dati di ' + e.missing + (e.missing === 1 ? ' giorno' : ' giorni') : '') + '.</span>';
+      h += '<div class="row"><button class="btn sm" data-me="incRows" data-i="' + i + '">' + (V.incRows === i ? 'Nascondi il calcolo' : 'Calcolo giorno per giorno') + '</button><button class="btn sm" data-me="incDel" data-d="' + Q.iso(e.start) + '"' + (e.id ? ' data-id="' + e.id + '"' : '') + '>Ignora</button></div>';
+      if (V.incRows === i) h += '<div class="tablebox"><table class="reg"><thead><tr><th>Giorno</th><th>T media</th><th>Umidità</th><th>Quota</th><th>Totale</th></tr></thead><tbody>' + e.rows.map(function (r) { return '<tr' + (r.fc ? ' style="color:var(--ink-2)"' : '') + '><td class="mono">' + Q.fmt(r.d) + (r.fc ? '*' : '') + '</td><td class="mono">' + Q.num(r.t, 1) + '°</td><td class="mono">' + (r.rh != null ? Math.round(r.rh) + '%' : '–') + '</td><td class="mono">' + Q.num(r.q, 2) + '</td><td class="mono">' + Q.num(r.tot, 1) + '%</td></tr>'; }).join("") + '</tbody></table><span class="small muted">* giorno di oggi o previsto</span></div>';
+      h += '</div>';
+    });
+    return h + '<span class="small muted">Tabella di Goidanich (valori dell\'articolo VineSens, Sensors 2017). Sotto 10 °C lo sviluppo si considera fermo, tra 10 e 12 °C vale il valore dei 12 °C, da 25 °C quello dei 25 °C.</span>';
+  }
+
   window.QOMeteo = {
     cardHtml: cardHtml,
+    briefHtml: briefHtml,
+    incubations: incubations,
+    incAlerts: incAlerts,
     rainSince: rainSince,
     summary: summary,
     markManual: function () { M().manual = true; },
