@@ -28,6 +28,7 @@ Ruoli:
 | `js/mappa.js` | Mappa satellitare, posizione GPS, foto aeree importate |
 | `js/inventario.js` | Magazzino: articoli, lotti, movimenti, avvisi |
 | `js/meteo.js` | Meteo: previsione, stima del passato, dati della stazione |
+| `js/prodotti.js` | Prodotti inseriti a mano e da codice a barre |
 | `js/sync.js` | Account, aziende, inviti e sincronizzazione con Firebase |
 | `js/config.js` | Configurazione del progetto Firebase (da compilare) |
 | `firestore.rules` | Regole di sicurezza del database |
@@ -125,6 +126,14 @@ Il piano gratuito (Spark) basta per un'azienda con pochi utenti.
 ## Aggiornare l'app
 
 Dopo ogni modifica ai file aumenta `VERSION` in `sw.js` (per esempio `qo-v2`): così i telefoni scaricano la versione nuova alla riapertura.
+
+## Libreria prodotti
+
+- 27 prodotti bio e biodinamici di base: rami (ossicloruro, idrossido, solfato tribasico, poltiglia bordolese), zolfo e polisolfuro di calcio, bicarbonato di potassio, Ampelomyces, Bacillus, Aureobasidium, Trichoderma, cerevisane, spinosad, Bacillus thuringiensis, azadiractina, piretrine, oli, saponi, Beauveria, caolino, feromoni, sostanze di base e preparati biodinamici.
+- Dove la fonte non riporta la carenza (cambia da prodotto commerciale a prodotto commerciale), l'app scrive "da etichetta" e non inventa numeri.
+- **Nuovo prodotto**: si inserisce il prodotto commerciale con i dati della sua etichetta (carenza vite e altre colture, intervallo, passaggi massimi, rame, avversità, numero di registrazione, link all'etichetta, codici a barre). Da ogni prodotto di base si può creare una versione con i dati della propria etichetta.
+- **Scansiona codice**: se il codice è già associato apre il prodotto; altrimenti prova a trovare il nome in Open Products Facts e apre il modulo con il codice già inserito. Non esiste una banca dati gratuita con le etichette dei fitosanitari leggibile da un'app: i pulsanti "Cerca online" e "Banca dati del Ministero" aiutano a trovarla.
+- I prodotti inseriti si sincronizzano con l'azienda e si usano in trattamenti, magazzino, registro e difesa.
 
 ## Fonti dei dati sui trattamenti
 

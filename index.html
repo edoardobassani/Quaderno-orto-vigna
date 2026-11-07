@@ -206,6 +206,10 @@ var SRC={
   bt:{t:"Scheda Biobit DF (Bacillus thuringiensis kurstaki)",u:"https://agronotizie.imagelinenetwork.com/materiali/Varie/File/Leaflet-Biobit-DF.pdf"},
   neem:{t:"Regione Emilia-Romagna, manuale prodotti a basso impatto: azadiractina",u:"https://agricoltura.regione.emilia-romagna.it/fitosanitario/difesa-sostenibile/uso-sostenibile/prodotti-fitosanitari/Manuale-basso-impatto/documenti/9-1-1-azadiractina-14_03_24.pdf/@@download/file"},
   piretro:{t:"Regione Emilia-Romagna, manuale prodotti a basso impatto: piretrine",u:"https://agricoltura.regione.emilia-romagna.it/fitosanitario/difesa-sostenibile/uso-sostenibile/prodotti-fitosanitari/Manuale-basso-impatto/documenti/9-1-2-piretrine-14_03_24.pdf/@@download/file"},
+  erbio:{t:"Regione Emilia-Romagna, mezzi tecnici ammessi in agricoltura biologica (ottobre 2023)",u:"https://agricoltura.regione.emilia-romagna.it/fitosanitario/difesa-sostenibile/bollettini/approfondimenti/agricoltura-biologica-mezzi-di-difesa/mezzi_tecnici_agricoltura_bio_ottobre_2023/@@download/file"},
+  spinosad:{t:"Regione Emilia-Romagna, manuale prodotti a basso impatto: spinosad",u:"https://agricoltura.regione.emilia-romagna.it/fitosanitario/difesa-sostenibile/uso-sostenibile/prodotti-fitosanitari/Manuale-basso-impatto/documenti/8-5-1-spinosad-14_03_24.pdf/@@download/file"},
+  ampelo:{t:"Regione Emilia-Romagna, manuale prodotti a basso impatto: Ampelomyces quisqualis",u:"https://agricoltura.regione.emilia-romagna.it/fitosanitario/difesa-sostenibile/uso-sostenibile/prodotti-fitosanitari/Manuale-basso-impatto/documenti/8-2-3-ampelomyces-14_03_24.pdf/@@download/file"},
+  ia:{t:"L'Informatore Agrario, biocontrollo: microrganismi registrati su vite",u:"https://informatoreagrario.it/wp-content/uploads/2022/06/Biocontrollo_Microrganismi_registrati_su_vite.pdf"},
   equi:{t:"Reg. di esecuzione (UE) 462/2014, Equisetum arvense sostanza di base",u:"https://www.legislation.gov.uk/eur/2014/462"}
 };
 var PRODUCTS={
@@ -228,8 +232,55 @@ var PRODUCTS={
   bd500:{n:"Preparato 500 (cornoletame)",kind:"Biodinamico, sul terreno",tgt:[],every:[90,180],car:0,
     notes:["Si distribuisce sul terreno nel pomeriggio, in autunno e in primavera.","Uno o due passaggi a stagione."],src:[],level:"Pratica biodinamica"},
   bd501:{n:"Preparato 501 (cornosilice)",kind:"Biodinamico, sulle foglie",tgt:[],every:[14,21],car:0,
-    notes:["Si nebulizza sulle foglie al mattino presto.","Pochi passaggi per ciclo colturale."],src:[],level:"Pratica biodinamica"}
+    notes:["Si nebulizza sulle foglie al mattino presto.","Pochi passaggi per ciclo colturale."],src:[],level:"Pratica biodinamica"},
+  idrossido:{n:"Rame (idrossido)",kind:"Fungicida, ammesso in bio",tgt:["peronospora"],every:[7,14],car:null,rainWash:true,copper:true,maxDose:null,
+    notes:["Limite rame: 28 kg/ha in 7 anni, in media 4 kg/ha all'anno.","Carenza, dose e numero di passaggi cambiano da prodotto a prodotto: vale l'etichetta."],src:["erbio"],level:"Elenco regionale bio",everyNote:"Intervallo come per gli altri rami: verifica l'etichetta."},
+  poltiglia:{n:"Poltiglia bordolese",kind:"Fungicida, ammesso in bio",tgt:["peronospora"],every:[7,14],car:null,rainWash:true,copper:true,maxDose:null,
+    notes:["Rame sotto forma di solfato neutralizzato con calce.","Limite rame: 28 kg/ha in 7 anni, in media 4 kg/ha all'anno.","Carenza e dose: vale l'etichetta."],src:["erbio"],level:"Elenco regionale bio",everyNote:"Intervallo come per gli altri rami: verifica l'etichetta."},
+  solfatorame:{n:"Rame (solfato tribasico)",kind:"Fungicida, ammesso in bio",tgt:["peronospora"],every:[7,14],car:null,rainWash:true,copper:true,maxDose:null,
+    notes:["Limite rame: 28 kg/ha in 7 anni, in media 4 kg/ha all'anno.","Carenza e dose: vale l'etichetta."],src:["erbio"],level:"Elenco regionale bio",everyNote:"Intervallo come per gli altri rami: verifica l'etichetta."},
+  zolfocalcico:{n:"Polisolfuro di calcio",kind:"Fungicida, ammesso in bio",tgt:["oidio"],every:[7,14],car:null,rainWash:true,
+    notes:["Nell'elenco dei mezzi bio compare come zolfo calcico.","Colture, dose e carenza: vale l'etichetta."],src:["erbio"],level:"Elenco regionale bio",everyNote:"Intervallo non indicato nelle fonti: vale l'etichetta."},
+  spinosad:{n:"Spinosad",kind:"Insetticida, ammesso in bio",tgt:["tignole","tripidi","lepidotteri","dorifora","minatori"],every:[8,10],car:null,rainWash:true,
+    notes:["Vite: tignoletta e tignola. Ortaggi: tripidi, minatori, nottue, cavolaia, tignola delle crucifere, dorifora, cimici.","Tossico per le api colpite direttamente: non trattare nelle ore centrali; a vegetazione asciutta l'impatto è trascurabile.","Attività residua di circa 8-10 giorni contro i lepidotteri.","Acqua sopra pH 6, meglio da solo.","La carenza cambia per coltura e prodotto (in scheda compaiono 15, 7 e 3 giorni): vale l'etichetta."],src:["spinosad"],level:"Manuale regionale",everyNote:"Ripetizione in base all'attività residua di 8-10 giorni indicata nella scheda."},
+  ampelomyces:{n:"Ampelomyces quisqualis",kind:"Fungicida biologico",tgt:["oidio"],every:[5,10],car:0,maxApp:{vite:12},rainWash:true,
+    notes:["Almeno 2 trattamenti a 5-10 giorni per insediarsi.","Vite: fino a 12 applicazioni l'anno, anche prima o dopo la vendemmia contro le forme svernanti; in stagione solo con meno del 3% di foglie colpite.","Ortaggi e fragola: al massimo 4 per ciclo, di solito ogni settimana.","Ripetere dopo piogge oltre 6 mm.","Non insieme a zolfo e saponi potassici: aspettare 5 giorni.","Trattare al mattino presto o di sera, acqua a pH 6-8, miscela da usare in giornata."],src:["ampelo"],level:"Manuale regionale"},
+  cerevisane:{n:"Cerevisane",kind:"Elicitore, ammesso in bio",tgt:["peronospora","oidio","botrite"],every:[7,14],car:null,rainWash:true,
+    notes:["Preventivo: stimola le difese della pianta, da associare o alternare ai fungicidi.","Intervallo e carenza: vale l'etichetta."],src:["ia","erbio"],level:"Rivista tecnica",everyNote:"Intervallo non indicato nelle fonti: vale l'etichetta."},
+  bacillus:{n:"Bacillus amyloliquefaciens e pumilus",kind:"Fungicida biologico",tgt:["botrite","oidio"],every:[7,14],car:null,
+    notes:["Vite: botrite e marciume acido; alcuni ceppi anche oidio.","Intervallo e carenza: vale l'etichetta del ceppo usato."],src:["ia","erbio"],level:"Rivista tecnica",everyNote:"Intervallo non indicato nelle fonti: vale l'etichetta."},
+  aureobasidium:{n:"Aureobasidium pullulans",kind:"Fungicida biologico",tgt:["botrite"],every:[7,14],car:null,
+    notes:["Vite: contro la botrite.","Intervallo e carenza: vale l'etichetta."],src:["ia","erbio"],level:"Rivista tecnica",everyNote:"Intervallo non indicato nelle fonti: vale l'etichetta."},
+  trichoderma:{n:"Trichoderma (malattie del legno)",kind:"Fungicida biologico",tgt:["mal dell'esca"],every:[365,365],car:null,
+    notes:["Contro mal dell'esca, eutipiosi e altre malattie del legno: un trattamento l'anno dopo la potatura invernale.","Alcuni ceppi anche contro la botrite."],src:["ia"],level:"Rivista tecnica",everyNote:"Un trattamento l'anno dopo la potatura."},
+  feromoni:{n:"Feromoni (confusione sessuale)",kind:"Confusione sessuale, ammessa in bio",tgt:["tignole"],every:[365,365],car:0,
+    notes:["Si usano solo in diffusori e trappole, non sulla vegetazione.","I diffusori si installano a inizio stagione."],src:["erbio"],level:"Elenco regionale bio",everyNote:"Un'installazione a stagione."},
+  olioarancio:{n:"Olio di arancio dolce",kind:"Fungicida, insetticida e acaricida, ammesso in bio",tgt:[],every:[7,10],car:null,
+    notes:["Avversità, colture, dose e carenza: vale l'etichetta del prodotto."],src:["erbio"],level:"Elenco regionale bio",everyNote:"Intervallo non indicato nelle fonti: vale l'etichetta."},
+  paraffina:{n:"Olio paraffinico",kind:"Insetticida e acaricida, ammesso in bio",tgt:[],every:[7,14],car:null,
+    notes:["Non insieme allo zolfo: rispettare la distanza indicata in etichetta.","Avversità, dose e carenza: vale l'etichetta."],src:["erbio"],level:"Elenco regionale bio",everyNote:"Intervallo non indicato nelle fonti: vale l'etichetta."},
+  saponi:{n:"Sali potassici di acidi grassi",kind:"Insetticida e acaricida, ammesso in bio",tgt:[],every:[7,10],car:null,
+    notes:["Agisce per contatto.","Avversità, dose e carenza: vale l'etichetta."],src:["erbio"],level:"Elenco regionale bio",everyNote:"Intervallo non indicato nelle fonti: vale l'etichetta."},
+  beauveria:{n:"Beauveria bassiana",kind:"Insetticida biologico",tgt:[],every:[7,10],car:null,
+    notes:["Fungo che attacca gli insetti; alcuni ceppi anche acaricidi.","Avversità, dose e carenza: vale l'etichetta del ceppo."],src:["erbio"],level:"Elenco regionale bio",everyNote:"Intervallo non indicato nelle fonti: vale l'etichetta."},
+  caolino:{n:"Caolino",kind:"Barriera contro gli insetti, ammesso in bio",tgt:[],every:[7,14],car:null,rainWash:true,
+    notes:["Lascia una patina bianca che scoraggia gli insetti.","Dose e carenza: vale l'etichetta."],src:["erbio"],level:"Elenco regionale bio",everyNote:"Intervallo non indicato nelle fonti: vale l'etichetta."},
+  lecitina:{n:"Lecitine (sostanza di base)",kind:"Sostanza di base, fungicida",tgt:[],every:[7,10],car:null,
+    notes:["Ammessa come sostanza di base.","Usi e dosi: vale la scheda della sostanza di base."],src:["erbio"],level:"Elenco regionale bio",everyNote:"Intervallo non indicato nelle fonti."},
+  chitosano:{n:"Chitosano (sostanza di base)",kind:"Sostanza di base, elicitore",tgt:[],every:[7,10],car:null,
+    notes:["Stimola le difese della pianta; azione fungicida e battericida.","Usi e dosi: vale la scheda della sostanza di base."],src:["erbio"],level:"Elenco regionale bio",everyNote:"Intervallo non indicato nelle fonti."}
 };
+var BUILTIN_PRODUCTS=Object.keys(PRODUCTS);
+/* prodotti inseriti a mano (S.customProducts): si aggiungono alla libreria con la chiave "u_<id>" */
+function mergeCustom(){
+  Object.keys(PRODUCTS).forEach(function(k){if(k.indexOf("u_")===0)delete PRODUCTS[k]});
+  var C=S&&S.customProducts||{};
+  Object.keys(C).forEach(function(id){var c=C[id],car=(c.car==null&&c.carV==null)?null:{_:c.car==null?null:+c.car,vite:c.carV==null?null:+c.carV};
+    PRODUCTS["u_"+id]={n:c.n||"Prodotto",kind:c.kind||"Prodotto",tgt:c.tgt||[],every:[+c.e1||7,+c.e2||+c.e1||14],car:car,rainWash:!!c.rainWash,copper:!!c.copper,maxAll:+c.maxAll||null,
+      notes:(c.notes||[]).filter(Boolean),src:[],level:"Inserito da te",custom:true,cid:id,url:c.url||"",reg:c.reg||"",maker:c.maker||"",codes:c.codes||[],bio:c.bio!==false}});
+}
+function carText(P){if(P.car==null)return "vedi etichetta";if(typeof P.car==="number")return P.car?P.car+" gg":"nessuna";
+  var parts=[];Object.keys(P.car).forEach(function(c){if(P.car[c]==null)return;parts.push((c==="_"?"altre colture":CROPS[c]?CROPS[c].n:c)+" "+P.car[c]+" gg")});return parts.length?parts.join(", "):"vedi etichetta"}
 
 /* ---------- stato ---------- */
 var KEY="quaderno-orto-v1",S;
@@ -305,9 +356,10 @@ function fill(plot,c,limit){
 /* ---------- trattamenti ---------- */
 function carenzaFor(prod,plot){
   var P=PRODUCTS[prod],cs=Object.keys(cropsIn(plot));
+  if(!P||P.car==null)return {days:0,offLabel:[],unknown:true};
   if(typeof P.car==="number")return {days:P.car,offLabel:[]};
-  var max=0,off=[];cs.forEach(function(c){if(P.car[c]==null)off.push(CROPS[c].n);else max=Math.max(max,P.car[c])});
-  return {days:max,offLabel:off};
+  var max=0,off=[],unk=false;cs.forEach(function(c){var v=P.car[c]!=null?P.car[c]:P.car._;if(v==null){if(P.custom||"_" in P.car)unk=true;else off.push(CROPS[c].n)}else max=Math.max(max,v)});
+  return {days:max,offLabel:off,unknown:unk};
 }
 function nextDue(pl){
   if(pl.done.length>=pl.count)return null;
@@ -396,7 +448,7 @@ function renderNav(){
   var due=S.plans.filter(function(p){var d=nextDue(p);return d&&d<=today()}).length;
   $("#nav").innerHTML=TABS.map(function(t){return '<a href="#" data-tab="'+t[0]+'"'+(UI.tab===t[0]?' aria-current="page"':'')+'>'+ICON[t[0]]+t[1]+(t[0]==="trattamenti"&&due?' <span class="badge b-warn">'+due+'</span>':'')+(t[0]==="magazzino"&&window.QOInv&&window.QOInv.alertsCount()?' <span class="badge b-bad">'+window.QOInv.alertsCount()+'</span>':'')+'</a>'}).join("");
 }
-function render(){renderNav();var a=$("#app");a.innerHTML=({oggi:vOggi,mappa:vMappa,impianto:vImpianto,vigna:vVigna,trattamenti:vTratt,magazzino:function(){return window.QOInv?window.QOInv.view():'<div class="top"><h1>Magazzino</h1></div><div class="panel">Caricamento…</div>'},libreria:vLib})[UI.tab]();afterRender()}
+function render(){mergeCustom();renderNav();var a=$("#app");a.innerHTML=({oggi:vOggi,mappa:vMappa,impianto:vImpianto,vigna:vVigna,trattamenti:vTratt,magazzino:function(){return window.QOInv?window.QOInv.view():'<div class="top"><h1>Magazzino</h1></div><div class="panel">Caricamento…</div>'},libreria:vLib})[UI.tab]();afterRender()}
 
 var FILL={serra:"var(--serra-fill)",campo:"var(--campo-fill)",tunnel:"var(--tunnel-fill)",vigna:"var(--vigna-fill)"};
 var STROKE={serra:"var(--serra)",campo:"var(--accent)",tunnel:"var(--tunnel)",vigna:"var(--vigna)"};
@@ -545,7 +597,7 @@ function vTratt(){
     var pl=o.pl,P=PRODUCTS[pl.prod],plot=plotById(pl.plot);if(!plot)return;var car=carenzaFor(pl.prod,plot),late=o.d&&o.d<t,now=o.d&&iso(o.d)===iso(t);
     var badge=!o.d?'<span class="badge b-n">completato</span>':late?'<span class="badge b-bad">in ritardo · '+fmtRel(o.d)+'</span>':now?'<span class="badge b-warn">oggi</span>':'<span class="badge b-n">'+fmtRel(o.d)+'</span>';
     h+='<div class="panel stack" style="gap:8px"><div class="row" style="justify-content:space-between;align-items:flex-start"><div style="min-width:0;flex:1"><b>'+P.n+'</b><br><span class="small muted">'+esc(plot.name)+' · ogni '+pl.every+' gg'+(pl.rain?' e dopo pioggia':'')+'</span></div>'+badge+'</div>';
-    h+='<div class="row"><span class="badge b-n">'+pl.done.length+' di '+pl.count+'</span><span class="badge b-n">carenza '+(car.days?car.days+' gg':'nessuna')+'</span>'+(P.copper?'<span class="badge b-n">'+num(+pl.cu||0,2)+' kg Cu/ha a passaggio</span>':'')+'</div>';
+    h+='<div class="row"><span class="badge b-n">'+pl.done.length+' di '+pl.count+'</span><span class="badge '+(car.unknown?'b-warn':'b-n')+'">carenza '+(car.unknown?'da etichetta':car.days?car.days+' gg':'nessuna')+'</span>'+(P.copper?'<span class="badge b-n">'+num(+pl.cu||0,2)+' kg Cu/ha a passaggio</span>':'')+'</div>';
     if(car.offLabel.length)h+='<div class="small" style="color:var(--bad)"><b>Attenzione:</b> '+car.offLabel.join(", ")+' non '+(car.offLabel.length>1?'sono':'è')+' in etichetta per questo prodotto. Verifica prima di trattare.</div>';
     var mx=P.maxApp?Object.keys(cropsIn(plot)).map(function(c){return P.maxApp[c]}).filter(Boolean):[];if(P.maxAll)mx.push(P.maxAll);
     if(mx.length&&pl.count>Math.min.apply(null,mx))h+='<div class="small" style="color:var(--warn)">Hai programmato '+pl.count+' passaggi, l\'etichetta ne consente al massimo '+Math.min.apply(null,mx)+' per coltura.</div>';
@@ -576,11 +628,12 @@ function planFormHtml(){
   return h;
 }
 function vLib(){
-  var h='<div class="top"><div><div class="eyebrow">Solo biologico e biodinamico</div><h1>Libreria</h1></div></div>';
+  var h='<div class="top"><div><div class="eyebrow">Solo biologico e biodinamico · '+Object.keys(PRODUCTS).length+' prodotti</div><h1>Libreria</h1></div></div>';
+  if(window.QOProd)h+=window.QOProd.headHtml();
   h+='<div class="panel small" style="margin-bottom:12px">Intervalli, carenze e limiti vengono dalle etichette e dai manuali regionali linkati. Le etichette cambiano tra un prodotto commerciale e l\'altro: per il tuo prodotto vale sempre la sua etichetta.</div><div class="list">';
-  Object.keys(PRODUCTS).forEach(function(k){
-    var P=PRODUCTS[k],car=typeof P.car==="number"?(P.car?P.car+' gg':'nessuna'):Object.keys(P.car).map(function(c){return CROPS[c].n+' '+P.car[c]}).join(", ")+' gg';
-    h+='<details class="panel"><summary><span style="flex:1">'+P.n+'</span><span class="badge b-n">'+P.level+'</span></summary><div class="stack" style="gap:8px;margin-top:8px"><span class="small muted">'+P.kind+(P.tgt.length?' · contro '+P.tgt.map(function(t){return DIS[t]?DIS[t].n.toLowerCase():t}).join(", "):'')+'</span><div class="grid2"><div><div class="muted small">Intervallo</div><b class="mono">'+P.every[0]+'-'+P.every[1]+' gg</b></div><div><div class="muted small">Carenza</div><b class="small">'+car+'</b></div></div><ul class="small" style="margin:0;padding-left:18px">'+P.notes.map(function(n){return '<li>'+n+'</li>'}).join("")+(P.everyNote?'<li>'+P.everyNote+'</li>':'')+'</ul>'+(P.src.length?P.src.map(function(s){return '<a class="src" href="'+SRC[s].u+'" target="_blank" rel="noopener">Fonte: '+SRC[s].t+'</a>'}).join(""):'<span class="src muted">Fonte: pratica di campo, nessuna etichetta.</span>')+'</div></details>';
+  Object.keys(PRODUCTS).sort(function(a,b){var ca=PRODUCTS[a].custom?0:1,cb=PRODUCTS[b].custom?0:1;return ca-cb||PRODUCTS[a].n.localeCompare(PRODUCTS[b].n,"it")}).forEach(function(k){
+    var P=PRODUCTS[k],car=carText(P);
+    h+='<details class="panel"'+(window.QOProd&&window.QOProd.isOpen(k)?' open':'')+'><summary><span style="flex:1">'+esc(P.n)+'</span><span class="badge '+(P.custom?'b-ok':'b-n')+'">'+P.level+'</span></summary><div class="stack" style="gap:8px;margin-top:8px"><span class="small muted">'+P.kind+(P.tgt.length?' · contro '+P.tgt.map(function(t){return DIS[t]?DIS[t].n.toLowerCase():t}).join(", "):'')+'</span><div class="grid2"><div><div class="muted small">Intervallo</div><b class="mono">'+P.every[0]+'-'+P.every[1]+' gg</b></div><div><div class="muted small">Carenza</div><b class="small">'+car+'</b></div></div><ul class="small" style="margin:0;padding-left:18px">'+P.notes.map(function(n){return '<li>'+esc(n)+'</li>'}).join("")+(P.everyNote?'<li>'+P.everyNote+'</li>':'')+'</ul>'+(P.custom?(window.QOProd?window.QOProd.cardExtra(k):''):(P.src.length?P.src.map(function(s){return '<a class="src" href="'+SRC[s].u+'" target="_blank" rel="noopener">Fonte: '+SRC[s].t+'</a>'}).join(""):'<span class="src muted">Fonte: pratica di campo, nessuna etichetta.</span>')+(window.QOProd?'<div><button class="btn sm" data-pr="dup" data-k="'+k+'">Crea una versione con i dati della mia etichetta</button></div>':''))+'</div></details>';
   });
   h+='</div><h2 style="margin:18px 0 8px">Distanze di impianto</h2><div class="panel" style="overflow-x:auto"><table class="small" style="border-collapse:collapse;width:100%"><thead><tr style="text-align:left"><th style="padding:4px 6px">Coltura</th><th style="padding:4px 6px">Fila</th><th style="padding:4px 6px">Tra file</th><th style="padding:4px 6px">Famiglia</th></tr></thead><tbody>'+Object.keys(CROPS).filter(function(c){return !CROPS[c].vine}).map(function(c){var C=CROPS[c];return '<tr style="border-top:1px solid var(--line)"><td style="padding:4px 6px">'+C.n+'</td><td class="mono" style="padding:4px 6px">'+C.row+'</td><td class="mono" style="padding:4px 6px">'+C.btw+'</td><td style="padding:4px 6px">'+C.fam+'</td></tr>'}).join("")+'</tbody></table></div>';
   var cloud=window.QOSync&&window.QOSync.active;
@@ -960,13 +1013,14 @@ window.QO={
     if(!S.weather)S.weather={t:14,rh:70,wet:0,rain:0};if(!S.vw)S.vw={t:12,rain:0,shoot:0};if(!S.botte)S.botte={sel:{},prod:"rame",dose:3,unit:"kg",water:500,tank:1000,tit:20};if(!S.cropSel)S.cropSel="lattuga";if(!S.samples)S.samples=[];if(!S.inv)S.inv={items:[],moves:[]};
     UI.vsel=null;UI.vedit=null;UI.planForm=null;UI.draw=null;render()},
   /* dati arrivati dal cloud: sostituiscono parcelle, piani, campioni e segni */
-  applyRemote:function(d){S.plots=d.plots;S.plans=d.plans;S.samples=d.samples;S.inv=d.inv||{items:[],moves:[]};if(d.meteo){var man=S.meteo&&S.meteo.manual;S.meteo=d.meteo;S.meteo.manual=!!man}S.geo=d.geo||S.geo||null;S.marksMeta=d.marksMeta||{};
+  applyRemote:function(d){if(d.customProducts)S.customProducts=d.customProducts;S.plots=d.plots;S.plans=d.plans;S.samples=d.samples;S.inv=d.inv||{items:[],moves:[]};if(d.meteo){var man=S.meteo&&S.meteo.manual;S.meteo=d.meteo;S.meteo.manual=!!man}S.geo=d.geo||S.geo||null;S.marksMeta=d.marksMeta||{};
     if(S.sel&&!plotById(S.sel))S.sel=S.plots[0]&&S.plots[0].id;if(!S.sel&&S.plots[0])S.sel=S.plots[0].id;S.vineInit=true;saveLocal();safeRender()},
   render:function(){safeRender()},
   saveLocal:function(){saveLocal()},
   toast:function(t){toast(t)},
   productName:function(k){return PRODUCTS[k]?PRODUCTS[k].n:k},
-  products:function(){return Object.keys(PRODUCTS).map(function(k){return {id:k,name:PRODUCTS[k].n,copper:!!PRODUCTS[k].copper}})},
+  products:function(){mergeCustom();return Object.keys(PRODUCTS).map(function(k){return {id:k,name:PRODUCTS[k].n,copper:!!PRODUCTS[k].copper}})},
+  product:function(k){return PRODUCTS[k]},cropList:function(){return CROPS},
   uid:uid,iso:iso,today:today,parse:parse,addDays:addDays,esc:esc,eur:eur,carenzaFor:carenzaFor,nextDue:nextDue,
   isLocal:function(){return KEY===LOCALKEY},
   plotName:function(id){var p=plotById(id);return p?p.name:"appezzamento"},
@@ -984,6 +1038,7 @@ load();render();
 <script src="js/mappa.js"></script>
 <script src="js/inventario.js"></script>
 <script src="js/meteo.js"></script>
+<script src="js/prodotti.js"></script>
 <script>
 if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
 </script>

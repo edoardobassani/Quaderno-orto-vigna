@@ -4,7 +4,7 @@
 import { firebaseConfig } from "./config.js";
 
 const FB = "https://www.gstatic.com/firebasejs/10.12.2/";
-const COLS = ["parcelle", "piani", "campioni", "segni", "impostazioni", "articoli", "movimenti", "meteo"];
+const COLS = ["parcelle", "piani", "campioni", "segni", "impostazioni", "articoli", "movimenti", "meteo", "prodotti"];
 const ROLES = { titolare: "Titolare", collaboratore: "Collaboratore", lettura: "Sola lettura" };
 const AKEY = "qo-azienda";
 const META = ["modificato", "modificatoDa"];
@@ -166,10 +166,12 @@ function decode() {
   const ms = (remote.impostazioni || {}).meteo || null, months = {};
   Object.entries(remote.meteo || {}).forEach(([id, d]) => { months[id] = d.ore ? JSON.parse(d.ore) : {}; });
   const meteo = ms ? Object.assign({}, ms.cfg || {}, { months }) : (Object.keys(months).length ? { months } : null);
-  return { plots, plans, samples, geo: g && g.geo ? g.geo : null, marksMeta, inv, meteo };
+  const customProducts = {};
+  Object.entries(remote.prodotti || {}).forEach(([id, d]) => { const o = Object.assign({}, d); META.forEach((k) => delete o[k]); customProducts[id] = o; });
+  return { plots, plans, samples, geo: g && g.geo ? g.geo : null, marksMeta, inv, meteo, customProducts };
 }
 function encode(S) {
-  const out = { parcelle: {}, piani: {}, campioni: {}, segni: {}, impostazioni: {}, articoli: {}, movimenti: {} };
+  const out = { parcelle: {}, piani: {}, campioni: {}, segni: {}, impostazioni: {}, articoli: {}, movimenti: {}, meteo: {}, prodotti: {} };
   (S.plots || []).forEach((p) => {
     const d = { name: p.name, type: p.type, pts: p.pts.map((q) => ({ x: q[0], y: q[1] })), plants: p.plants || [] };
     if (p.vine) {
@@ -185,6 +187,8 @@ function encode(S) {
   inv.items.forEach((it) => { const d = Object.assign({}, it); delete d.id; out.articoli[it.id] = clean(d); });
   inv.moves.forEach((m) => { const d = Object.assign({}, m); delete d.id; out.movimenti[m.id] = clean(d); });
   out.impostazioni.magazzino = clean({ maps: inv.maps || {}, fatture: inv.fatture || [] });
+  out.prodotti = {};
+  Object.keys(S.customProducts || {}).forEach((id) => { out.prodotti[id] = clean(S.customProducts[id]); });
   out.meteo = {};
   if (S.meteo) {
     const cfg = Object.assign({}, S.meteo); delete cfg.months; delete cfg.manual;
