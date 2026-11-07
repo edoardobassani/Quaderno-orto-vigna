@@ -1,17 +1,13 @@
-// Configurazione del progetto Firebase.
-// Dove trovarla: console Firebase → Impostazioni progetto (rotella) → Le tue app → app web → "Configurazione SDK".
-// Finché resta null, l'app funziona solo sul dispositivo e non condivide nulla.
+// Configurazione del progetto Firebase "quaderno-orto-vigna".
+// Dove trovarla: console Firebase → Impostazioni progetto (rotella) → Le tue app → Quaderno → "Configurazione SDK".
 // Questi valori non sono segreti: la protezione dei dati la fanno login e regole (firestore.rules).
+// Rimettendo null l'app torna a funzionare solo sul dispositivo.
 
-export const firebaseConfig = null;
-
-/* Esempio di come deve diventare:
 export const firebaseConfig = {
-  apiKey: "AIza...",
-  authDomain: "nome-progetto.firebaseapp.com",
-  projectId: "nome-progetto",
-  storageBucket: "nome-progetto.appspot.com",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:abcdef"
+  apiKey: "AIzaSyBDp6iVV4H_mb-KhrFRQSMC16mxqBI9Isc",
+  authDomain: "quaderno-orto-vigna.firebaseapp.com",
+  projectId: "quaderno-orto-vigna",
+  storageBucket: "quaderno-orto-vigna.firebasestorage.app",
+  messagingSenderId: "16337558673",
+  appId: "1:16337558673:web:4e1f5962cf133a6e14b330"
 };
-*/
