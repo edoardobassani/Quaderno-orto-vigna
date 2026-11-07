@@ -116,7 +116,7 @@ table.reg th{border-top:0;color:var(--ink-2);font-weight:600;font-size:13px}
 .kv b{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:15px}
 .filebtn{position:relative;overflow:hidden}
 .filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer;min-height:0}
-.nav a{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;font-weight:600;color:var(--ink-2);text-decoration:none;min-width:58px;padding:4px 0;border-radius:10px}
+.nav a{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:600;color:var(--ink-2);text-decoration:none;min-width:50px;padding:4px 0;border-radius:10px}
 .nav a[aria-current="page"]{color:var(--accent)}
 .nav svg{width:24px;height:24px}
 .strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
@@ -321,7 +321,7 @@ function harvestBlock(plot){
 }
 function copperYear(plot){
   var y=today().getFullYear(),kg=0;
-  S.plans.forEach(function(pl){if(pl.plot===plot.id&&PRODUCTS[pl.prod].copper)pl.done.forEach(function(d){if(parse(d).getFullYear()===y)kg+=(+pl.cu||0)})});
+  S.plans.forEach(function(pl){if(pl.plot===plot.id&&PRODUCTS[pl.prod].copper)pl.done.forEach(function(d){if(parse(d).getFullYear()===y){var real=window.QOInv&&window.QOInv.cuFor(pl,d,plot);kg+=(real!=null?real:(+pl.cu||0))}})});
   return kg;
 }
 function lastFor(plot,dis){
@@ -387,12 +387,13 @@ var ICON={
   libreria:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3Z"/><path d="M9 9h6M9 13h6"/></svg>'
 };
 ICON.vigna='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="10" r="2.2"/><circle cx="14" cy="10" r="2.2"/><circle cx="11.5" cy="14" r="2.2"/><circle cx="11.5" cy="18.5" r="2.2"/><path d="M12 7c0-2 1.5-3.5 4-4M12 7c-1.5-1-3.5-1.2-5-.5"/></svg>';
-var TABS=[["mappa","Mappa"],["impianto","Orto"],["vigna","Vigna"],["trattamenti","Trattam."],["libreria","Libreria"]];
+ICON.magazzino='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l9-5 9 5v10l-9 5-9-5Z"/><path d="M3 8l9 5 9-5M12 13v10"/></svg>';
+var TABS=[["mappa","Mappa"],["impianto","Orto"],["vigna","Vigna"],["trattamenti","Trattam."],["magazzino","Magazz."],["libreria","Libreria"]];
 function renderNav(){
   var due=S.plans.filter(function(p){var d=nextDue(p);return d&&d<=today()}).length;
-  $("#nav").innerHTML=TABS.map(function(t){return '<a href="#" data-tab="'+t[0]+'"'+(UI.tab===t[0]?' aria-current="page"':'')+'>'+ICON[t[0]]+t[1]+(t[0]==="trattamenti"&&due?' <span class="badge b-warn">'+due+'</span>':'')+'</a>'}).join("");
+  $("#nav").innerHTML=TABS.map(function(t){return '<a href="#" data-tab="'+t[0]+'"'+(UI.tab===t[0]?' aria-current="page"':'')+'>'+ICON[t[0]]+t[1]+(t[0]==="trattamenti"&&due?' <span class="badge b-warn">'+due+'</span>':'')+(t[0]==="magazzino"&&window.QOInv&&window.QOInv.alertsCount()?' <span class="badge b-bad">'+window.QOInv.alertsCount()+'</span>':'')+'</a>'}).join("");
 }
-function render(){renderNav();var a=$("#app");a.innerHTML=({mappa:vMappa,impianto:vImpianto,vigna:vVigna,trattamenti:vTratt,libreria:vLib})[UI.tab]();afterRender()}
+function render(){renderNav();var a=$("#app");a.innerHTML=({mappa:vMappa,impianto:vImpianto,vigna:vVigna,trattamenti:vTratt,magazzino:function(){return window.QOInv?window.QOInv.view():'<div class="top"><h1>Magazzino</h1></div><div class="panel">Caricamento…</div>'},libreria:vLib})[UI.tab]();afterRender()}
 
 var FILL={serra:"var(--serra-fill)",campo:"var(--campo-fill)",tunnel:"var(--tunnel-fill)",vigna:"var(--vigna-fill)"};
 var STROKE={serra:"var(--serra)",campo:"var(--accent)",tunnel:"var(--tunnel)",vigna:"var(--vigna)"};
@@ -543,7 +544,8 @@ function vTratt(){
     if(car.offLabel.length)h+='<div class="small" style="color:var(--bad)"><b>Attenzione:</b> '+car.offLabel.join(", ")+' non '+(car.offLabel.length>1?'sono':'è')+' in etichetta per questo prodotto. Verifica prima di trattare.</div>';
     var mx=P.maxApp?Object.keys(cropsIn(plot)).map(function(c){return P.maxApp[c]}).filter(Boolean):[];if(P.maxAll)mx.push(P.maxAll);
     if(mx.length&&pl.count>Math.min.apply(null,mx))h+='<div class="small" style="color:var(--warn)">Hai programmato '+pl.count+' passaggi, l\'etichetta ne consente al massimo '+Math.min.apply(null,mx)+' per coltura.</div>';
-    h+='<div class="row">'+(o.d?'<button class="btn sm primary" data-act="done" data-id="'+pl.id+'">Fatto oggi</button>':'')+(pl.done.length?'<button class="btn sm" data-act="undo" data-id="'+pl.id+'">Annulla ultimo</button>':'')+'<button class="btn sm danger" data-act="delPlan" data-id="'+pl.id+'">'+(UI.confirm===pl.id?'Tocca ancora':'Elimina')+'</button></div></div>';
+    if(UI.doneFor===pl.id&&window.QOInv)h+=window.QOInv.doneFormHtml(pl,plot)+'</div>';
+    else h+='<div class="row">'+(o.d?'<button class="btn sm primary" data-act="done" data-id="'+pl.id+'">Fatto oggi</button>':'')+(pl.done.length?'<button class="btn sm" data-act="undo" data-id="'+pl.id+'">Annulla ultimo</button>':'')+'<button class="btn sm danger" data-act="delPlan" data-id="'+pl.id+'">'+(UI.confirm===pl.id?'Tocca ancora':'Elimina')+'</button></div></div>';
   });
   h+='</div>';
   /* rame */
@@ -738,15 +740,17 @@ function vBotte(){
   return h;
 }
 function regRows(){
-  var rows=[];S.plans.forEach(function(pl){var p=plotById(pl.plot);if(!p||(UI.regVig&&p.type!=="vigna"))return;pl.done.forEach(function(d){var c=carenzaFor(pl.prod,p).days;rows.push({d:d,p:p,pl:pl,car:c?iso(addDays(parse(d),c)):""})})});
+  var rows=[];S.plans.forEach(function(pl){var p=plotById(pl.plot);if(!p||(UI.regVig&&p.type!=="vigna"))return;pl.done.forEach(function(d){var c=carenzaFor(pl.prod,p).days;var mv=window.QOInv?window.QOInv.moveFor(pl.id,d):null;rows.push({d:d,p:p,pl:pl,car:c?iso(addDays(parse(d),c)):"",mv:mv})})});
   return rows.sort(function(a,b){return a.d<b.d?1:-1});
 }
+function eur(v){return (+v||0).toLocaleString("it-IT",{style:"currency",currency:"EUR"})}
+function cuOf(r){var real=window.QOInv&&window.QOInv.cuFor(r.pl,r.d,r.p);return real!=null?real:(+r.pl.cu||0)}
 function vRegistro(){
   var rows=regRows();
   var h='<div class="row" style="justify-content:space-between;margin-bottom:8px"><div class="seg" style="margin:0"><button data-act="vReg" data-v="1" aria-pressed="'+UI.regVig+'">Solo vigna</button><button data-act="vReg" data-v="0" aria-pressed="'+(!UI.regVig)+'">Tutta l\'azienda</button></div><button class="btn sm" data-act="vRegCopy">Copia come tabella</button></div>';
-  h+='<div class="panel tablebox"><table class="reg"><thead><tr><th>Data</th><th>Appezzamento</th><th>Ha</th><th>Coltura</th><th>Prodotto</th><th>Cu kg/ha</th><th>Carenza fino al</th></tr></thead><tbody>';
-  if(!rows.length)h+='<tr><td colspan="7" class="muted">Nessun trattamento registrato. Segna "Fatto oggi" nella sezione Trattamenti.</td></tr>';
-  rows.forEach(function(r){h+='<tr><td class="mono">'+fmt(parse(r.d))+'</td><td>'+esc(r.p.name)+'</td><td class="mono">'+num(area(r.p.pts)/1e4,2)+'</td><td>'+Object.keys(cropsIn(r.p)).map(function(c){return CROPS[c].n}).join(", ")+'</td><td>'+PRODUCTS[r.pl.prod].n+'</td><td class="mono">'+(PRODUCTS[r.pl.prod].copper?num(+r.pl.cu||0,2):'')+'</td><td class="mono">'+(r.car?fmt(parse(r.car)):'')+'</td></tr>'});
+  h+='<div class="panel tablebox"><table class="reg"><thead><tr><th>Data</th><th>Appezzamento</th><th>Ha</th><th>Coltura</th><th>Prodotto</th><th>Quantità</th><th>Costo</th><th>Cu kg/ha</th><th>Carenza fino al</th></tr></thead><tbody>';
+  if(!rows.length)h+='<tr><td colspan="9" class="muted">Nessun trattamento registrato. Segna "Fatto oggi" nella sezione Trattamenti.</td></tr>';
+  rows.forEach(function(r){h+='<tr><td class="mono">'+fmt(parse(r.d))+'</td><td>'+esc(r.p.name)+'</td><td class="mono">'+num(area(r.p.pts)/1e4,2)+'</td><td>'+Object.keys(cropsIn(r.p)).map(function(c){return CROPS[c].n}).join(", ")+'</td><td>'+PRODUCTS[r.pl.prod].n+'</td><td class="mono">'+(r.mv?num(r.mv.qty,2)+' '+esc(r.mv.unit):'')+'</td><td class="mono">'+(r.mv&&r.mv.cost?eur(r.mv.cost):'')+'</td><td class="mono">'+(PRODUCTS[r.pl.prod].copper?num(cuOf(r),2):'')+'</td><td class="mono">'+(r.car?fmt(parse(r.car)):'')+'</td></tr>'});
   h+='</tbody></table></div><p class="small muted">"Copia come tabella" copia i dati separati da punto e virgola: incollali in un foglio di calcolo per il quaderno di campagna.</p>';
   return h;
 }
@@ -797,7 +801,7 @@ var VACT={
   vPhenAdd:function(){var p=plotById(UI.vsel),st=$("#vStage").value,d=$("#vStageDate").value||iso(today());p.vine.phen.push({st:st,date:d});p.vine.phen.sort(function(a,b){return a.date<b.date?-1:1});save();toast(STN[st][1]+" registrato")},
   vPlan:function(b){var k=b.getAttribute("data-p"),P=PRODUCTS[k];UI.planForm={prod:k,plot:b.getAttribute("data-plot"),start:iso(today()),every:P.every[0],count:P.copper?4:(P.maxAll||3),rain:!!P.rainWash,cu:0.6};UI.tab="trattamenti";window.scrollTo(0,0)},
   vReg:function(b){UI.regVig=b.getAttribute("data-v")==="1"},
-  vRegCopy:function(){var rows=regRows(),t=["Data;Appezzamento;Ettari;Coltura;Prodotto;Rame kg/ha;Carenza fino al"].concat(rows.map(function(r){return [r.d,r.p.name,num(area(r.p.pts)/1e4,2),Object.keys(cropsIn(r.p)).map(function(c){return CROPS[c].n}).join(", "),PRODUCTS[r.pl.prod].n,PRODUCTS[r.pl.prod].copper?num(+r.pl.cu||0,2):"",r.car].join(";")})).join("\n");
+  vRegCopy:function(){var rows=regRows(),t=["Data;Appezzamento;Ettari;Coltura;Prodotto;Quantità;Unità;Costo euro;Rame kg/ha;Carenza fino al"].concat(rows.map(function(r){return [r.d,r.p.name,num(area(r.p.pts)/1e4,2),Object.keys(cropsIn(r.p)).map(function(c){return CROPS[c].n}).join(", "),PRODUCTS[r.pl.prod].n,r.mv?num(r.mv.qty,2):"",r.mv?r.mv.unit:"",r.mv&&r.mv.cost?num(r.mv.cost,2):"",PRODUCTS[r.pl.prod].copper?num(cuOf(r),2):"",r.car].join(";")})).join("\n");
     if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){toast(rows.length+" righe copiate")},function(){toast("Copia non riuscita in questa vista")});else toast("Copia non disponibile qui");return false},
   vmAdd:function(){var br=parseFloat($("#vmBrix").value),ac=parseFloat($("#vmAc").value),ph=parseFloat($("#vmPh").value);if(!isFinite(br)){toast("Inserisci almeno i °Brix");return false}S.samples=S.samples||[];S.samples.push({id:uid(),plot:UI.vmSel,date:$("#vmDate").value||iso(today()),brix:br,ac:isFinite(ac)?ac:null,ph:isFinite(ph)?ph:null});save();toast("Campione aggiunto")},
   vmDel:function(b,id){S.samples=S.samples.filter(function(x){return x.id!==id});save()},
@@ -858,8 +862,8 @@ document.addEventListener("click",function(e){
     planFrom:function(){var k=b.getAttribute("data-p"),P=PRODUCTS[k];UI.planForm={prod:k,plot:b.getAttribute("data-plot"),start:iso(today()),every:P.every[0],count:P.maxAll||3,rain:!!P.rainWash,cu:0.6};window.scrollTo(0,0)},
     planCancel:function(){UI.planForm=null},
     planSave:function(){readPlanForm();var f=UI.planForm;if(!(f.every>0&&f.count>0)){toast("Controlla intervallo e passaggi");return}S.plans.push({id:uid(),prod:f.prod,plot:f.plot,start:f.start,every:f.every,count:f.count,rain:f.rain,cu:f.cu,done:[]});UI.planForm=null;save();toast("Trattamento programmato")},
-    done:function(){var pl=S.plans.find(function(p){return p.id===id});pl.done.push(iso(today()));save();var c=carenzaFor(pl.prod,plotById(pl.plot)).days;toast(c?"Registrato. Non raccogliere fino a "+fmt(addDays(today(),c)):"Registrato")},
-    undo:function(){var pl=S.plans.find(function(p){return p.id===id});pl.done.pop();save()},
+    done:function(){var pl=S.plans.find(function(p){return p.id===id});if(window.QOInv&&window.QOInv.needsForm(pl)){UI.doneFor=pl.id;return}pl.done.push(iso(today()));save();var c=carenzaFor(pl.prod,plotById(pl.plot)).days;toast(c?"Registrato. Non raccogliere fino a "+fmt(addDays(today(),c)):"Registrato")},
+    undo:function(){var pl=S.plans.find(function(p){return p.id===id}),d=pl.done.pop();if(window.QOInv)window.QOInv.onUndo(pl,d);save()},
     delPlan:function(){if(UI.confirm!==id){UI.confirm=id;return}S.plans=S.plans.filter(function(p){return p.id!==id});UI.confirm=null;save()},
     copy:function(){var t=JSON.stringify(S);if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){toast("Dati copiati")},function(){toast("Copia non riuscita in questa vista")})}else toast("Copia non disponibile qui")},
     reset:function(){if(UI.confirm!=="reset"){UI.confirm="reset";return}S=sample();VIEWS={};UI.confirm=null;save();toast("Dati di esempio ripristinati")}
@@ -895,14 +899,17 @@ window.QO={
   useKey:function(k){KEY=k||LOCALKEY;VC={};VIEWS={};var prefs=S?{weather:S.weather,cropSel:S.cropSel,vw:S.vw,botte:S.botte}:{};
     try{var r=localStorage.getItem(KEY);if(r){S=JSON.parse(r)}else if(KEY===LOCALKEY){S=sample()}else{S={plots:[],plans:[],samples:[],vineInit:true}}}catch(e){S=KEY===LOCALKEY?sample():{plots:[],plans:[],samples:[],vineInit:true}}
     ["weather","cropSel","vw","botte"].forEach(function(f){if(S[f]==null&&prefs[f]!=null)S[f]=prefs[f]});
-    if(!S.weather)S.weather={t:14,rh:70,wet:0,rain:0};if(!S.vw)S.vw={t:12,rain:0,shoot:0};if(!S.botte)S.botte={sel:{},prod:"rame",dose:3,unit:"kg",water:500,tank:1000,tit:20};if(!S.cropSel)S.cropSel="lattuga";if(!S.samples)S.samples=[];
+    if(!S.weather)S.weather={t:14,rh:70,wet:0,rain:0};if(!S.vw)S.vw={t:12,rain:0,shoot:0};if(!S.botte)S.botte={sel:{},prod:"rame",dose:3,unit:"kg",water:500,tank:1000,tit:20};if(!S.cropSel)S.cropSel="lattuga";if(!S.samples)S.samples=[];if(!S.inv)S.inv={items:[],moves:[]};
     UI.vsel=null;UI.vedit=null;UI.planForm=null;UI.draw=null;render()},
   /* dati arrivati dal cloud: sostituiscono parcelle, piani, campioni e segni */
-  applyRemote:function(d){S.plots=d.plots;S.plans=d.plans;S.samples=d.samples;S.geo=d.geo||S.geo||null;S.marksMeta=d.marksMeta||{};
+  applyRemote:function(d){S.plots=d.plots;S.plans=d.plans;S.samples=d.samples;S.inv=d.inv||{items:[],moves:[]};S.geo=d.geo||S.geo||null;S.marksMeta=d.marksMeta||{};
     if(S.sel&&!plotById(S.sel))S.sel=S.plots[0]&&S.plots[0].id;if(!S.sel&&S.plots[0])S.sel=S.plots[0].id;S.vineInit=true;saveLocal();safeRender()},
   render:function(){safeRender()},
   toast:function(t){toast(t)},
   productName:function(k){return PRODUCTS[k]?PRODUCTS[k].n:k},
+  products:function(){return Object.keys(PRODUCTS).map(function(k){return {id:k,name:PRODUCTS[k].n,copper:!!PRODUCTS[k].copper}})},
+  uid:uid,iso:iso,today:today,parse:parse,addDays:addDays,esc:esc,eur:eur,carenzaFor:carenzaFor,nextDue:nextDue,
+  isLocal:function(){return KEY===LOCALKEY},
   plotName:function(id){var p=plotById(id);return p?p.name:"appezzamento"},
   /* strumenti per la mappa satellitare (js/mappa.js) */
   ui:UI,save:function(){save()},plotById:plotById,vineGeo:vineGeo,ceppoXY:ceppoXY,vdot:vdot,pip:pip,area:area,bbox:bbox,num:num,m2:m2,fmt:fmt,
@@ -916,6 +923,7 @@ load();render();
 <script type="module" src="js/sync.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="js/mappa.js"></script>
+<script src="js/inventario.js"></script>
 <script>
 if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
 </script>

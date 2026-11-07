@@ -4,12 +4,12 @@
 import { firebaseConfig } from "./config.js";
 
 const FB = "https://www.gstatic.com/firebasejs/10.12.2/";
-const COLS = ["parcelle", "piani", "campioni", "segni", "impostazioni"];
+const COLS = ["parcelle", "piani", "campioni", "segni", "impostazioni", "articoli", "movimenti"];
 const ROLES = { titolare: "Titolare", collaboratore: "Collaboratore", lettura: "Sola lettura" };
 const AKEY = "qo-azienda";
 const META = ["modificato", "modificatoDa"];
 
-const Sync = (window.QOSync = { active: false, push: () => {} });
+const Sync = (window.QOSync = { active: false, push: () => {}, userName: () => "" });
 let A, F, auth, db, user = null;
 let aziende = [], inviti = [], invitiAzienda = [], attivita = [];
 let current = null;
@@ -27,6 +27,7 @@ const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { retur
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 const role = () => (current && user ? (current.data.membri || {})[user.uid] || null : null);
 const myName = () => (user ? user.displayName || (user.email || "").split("@")[0] : "");
+Sync.userName = () => (Sync.active ? myName() : "");
 const QO = () => window.QO;
 const errText = (e) => {
   const c = (e && e.code) || "";
@@ -154,10 +155,14 @@ function decode() {
   const plans = Object.entries(remote.piani || {}).map(([id, d]) => { const o = strip(id, d); o.done = o.done || []; return o; });
   const samples = Object.entries(remote.campioni || {}).map(([id, d]) => strip(id, d));
   const g = (remote.impostazioni || {}).geo;
-  return { plots, plans, samples, geo: g && g.geo ? g.geo : null, marksMeta };
+  const inv = {
+    items: Object.entries(remote.articoli || {}).map(([id, d]) => strip(id, d)),
+    moves: Object.entries(remote.movimenti || {}).map(([id, d]) => strip(id, d))
+  };
+  return { plots, plans, samples, geo: g && g.geo ? g.geo : null, marksMeta, inv };
 }
 function encode(S) {
-  const out = { parcelle: {}, piani: {}, campioni: {}, segni: {}, impostazioni: {} };
+  const out = { parcelle: {}, piani: {}, campioni: {}, segni: {}, impostazioni: {}, articoli: {}, movimenti: {} };
   (S.plots || []).forEach((p) => {
     const d = { name: p.name, type: p.type, pts: p.pts.map((q) => ({ x: q[0], y: q[1] })), plants: p.plants || [] };
     if (p.vine) {
@@ -169,6 +174,9 @@ function encode(S) {
   (S.plans || []).forEach((pl) => { const d = Object.assign({}, pl); delete d.id; out.piani[pl.id] = clean(d); });
   (S.samples || []).forEach((s) => { const d = Object.assign({}, s); delete d.id; out.campioni[s.id] = clean(d); });
   out.impostazioni.geo = { geo: S.geo ? clean(S.geo) : null };
+  const inv = S.inv || { items: [], moves: [] };
+  inv.items.forEach((it) => { const d = Object.assign({}, it); delete d.id; out.articoli[it.id] = clean(d); });
+  inv.moves.forEach((m) => { const d = Object.assign({}, m); delete d.id; out.movimenti[m.id] = clean(d); });
   return out;
 }
 function applyAll() {
@@ -176,8 +184,8 @@ function applyAll() {
   if (pushTimer) { needApply = true; return; }
   if (uploadPending) {
     const d = uploadPending; uploadPending = null;
-    baseline = encode({ plots: [], plans: [], samples: [], geo: null });
-    QO().applyRemote({ plots: d.plots || [], plans: d.plans || [], samples: d.samples || [], geo: d.geo || null, marksMeta: {} });
+    baseline = encode({ plots: [], plans: [], samples: [], geo: null, inv: { items: [], moves: [] } });
+    QO().applyRemote({ plots: d.plots || [], plans: d.plans || [], samples: d.samples || [], geo: d.geo || null, marksMeta: {}, inv: d.inv || { items: [], moves: [] } });
     doPush(QO().getState(), true);
     return;
   }
@@ -227,6 +235,12 @@ function logActivity(ops) {
     if (o.col === "campioni" && o.op === "set" && !p) items.push(`Campionamento su ${pn(d.plot)}: ${d.brix} °Brix`);
     if (o.col === "parcelle" && o.op === "set" && !p) items.push(`Nuovo appezzamento: ${d.name}`);
     if (o.col === "parcelle" && o.op === "del") items.push(`Appezzamento eliminato: ${p.name}`);
+    if (o.col === "movimenti" && o.op === "set" && !p) {
+      const art = ((QO().getState().inv || {}).items || []).find((x) => x.id === d.item), nm = art ? art.name : "articolo", u = art ? art.unit : "";
+      if (d.kind === "acquisto") items.push(`Acquisto: ${nm}, ${d.qty} ${u}`);
+      else if (d.kind === "rettifica") items.push(`Conteggio in magazzino: ${nm}`);
+      else if (d.kind === "uso") items.push(`Scarico: ${nm}, ${-d.qty} ${u}`);
+    }
   });
   items.slice(0, 10).forEach((t) => F.addDoc(F.collection(db, "aziende", current.id, "attivita"), { testo: t, da: myName(), uid: user.uid, quando: F.serverTimestamp() }).catch(() => {}));
 }
@@ -329,7 +343,7 @@ async function act(a, id) {
       case "create": {
         const nome = val("saAz"); if (!nome) { msg = "Dai un nome all'azienda."; break; }
         const up = document.getElementById("saUp").checked, st = QO().getState();
-        const copy = up ? clean({ plots: st.plots, plans: st.plans, samples: st.samples || [], geo: st.geo || null }) : null;
+        const copy = up ? clean({ plots: st.plots, plans: st.plans, samples: st.samples || [], geo: st.geo || null, inv: st.inv || { items: [], moves: [] } }) : null;
         const ref = await F.addDoc(F.collection(db, "aziende"), { nome, membri: { [user.uid]: "titolare" }, membriInfo: { [user.uid]: { nome: myName(), email: user.email || "" } }, creata: F.serverTimestamp() });
         enter({ id: ref.id, data: { nome, membri: { [user.uid]: "titolare" }, membriInfo: { [user.uid]: { nome: myName(), email: user.email || "" } } } }, copy);
         msg = "Azienda creata" + (up ? ": sto caricando i dati del dispositivo." : "."); break;

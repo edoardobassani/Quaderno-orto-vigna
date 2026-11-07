@@ -26,6 +26,7 @@ Ruoli:
 |---|---|
 | `index.html` | L'app |
 | `js/mappa.js` | Mappa satellitare, posizione GPS, foto aeree importate |
+| `js/inventario.js` | Magazzino: articoli, lotti, movimenti, avvisi |
 | `js/sync.js` | Account, aziende, inviti e sincronizzazione con Firebase |
 | `js/config.js` | Configurazione del progetto Firebase (da compilare) |
 | `firestore.rules` | Regole di sicurezza del database |
@@ -40,6 +41,16 @@ Ruoli:
 - **Registra perimetro**: si cammina lungo il confine e l'app crea l'area. Usa solo i punti con precisione entro 15 m.
 - **Precisione**: un telefono sbaglia in genere di 3-5 m. Per il singolo ceppo serve un ricevitore GNSS RTK: su Android si collega come "posizione fittizia" dalle opzioni sviluppatore, su iPhone con i ricevitori compatibili.
 - Il GPS funziona con l'app aperta e lo schermo acceso: l'app tiene lo schermo sveglio finché il GPS è attivo.
+
+## Magazzino
+
+- **Articoli** divisi per categoria: difesa, concimi, sementi e piantine, barbatelle, materiali, carburante, cantina.
+- **La giacenza è la somma dei movimenti**: acquisti, scarichi, scarichi da trattamento e conteggi. Non si scrive mai a mano, così più persone possono lavorare insieme, anche senza rete, senza sovrascriversi.
+- **Acquisto**: si precompila con l'ultimo acquisto dello stesso articolo (fornitore, prezzo, quantità). Lotto e scadenza sono facoltativi.
+- **Trattamenti**: un articolo di difesa si collega alla scheda della Libreria. Quando un trattamento è segnato come fatto, l'app propone la quantità (dose per ettari, o la dose dell'ultimo calcolo della botte) e la scala dal lotto più vecchio. La quantità e il costo finiscono nel registro, e il rame dell'anno si calcola dalla quantità vera.
+- **Conteggio**: si scrive quanto c'è davvero e l'app registra la differenza.
+- **Avvisi**: sotto la scorta minima, prodotti che mancano per i trattamenti dei prossimi 14 giorni, lotti in scadenza entro 60 giorni. Da questi nasce la lista "Da comprare".
+- **Prezzi**: prezzo medio pagato, valore del magazzino, costo di ogni trattamento.
 
 ## Foto aeree vostre
 
