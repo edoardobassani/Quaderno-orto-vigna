@@ -123,8 +123,8 @@
           Object.keys(p.vine.marks || {}).forEach(function (key) {
             var a = key.split(":").map(Number);
             if (!g.rows[a[0]] || !g.rows[a[0]].segs[a[1]] || a[2] >= g.rows[a[0]].segs[a[1]].c) return;
-            var f = p.vine.marks[key] === "f";
-            lay.marks.addLayer(L.circleMarker(toLL(Q.ceppoXY(g, a[0], a[1], a[2])), { renderer: canvasR, radius: 5, weight: 2, color: f ? bad : surf, fillColor: f ? surf : warn, fillOpacity: 1, interactive: false }));
+            var mk = p.vine.marks[key], f = mk === "f", nw = mk === "n", acc = cssVar("--accent");
+            lay.marks.addLayer(L.circleMarker(toLL(Q.ceppoXY(g, a[0], a[1], a[2])), { renderer: canvasR, radius: 5, weight: 2, color: f ? bad : surf, fillColor: f ? surf : nw ? acc : warn, fillOpacity: 1, interactive: false }));
           });
         }
       });
@@ -313,9 +313,9 @@
       else {
         var g = Q.vineGeo(p), key = s.ri + ":" + s.k + ":" + s.i, m = p.vine.marks[key], segs = g.rows[s.ri].segs.length;
         h += '<span>Sei in <b>' + esc(p.name) + '</b>, <b>filare ' + (s.ri + 1) + '</b>, <b>ceppo ' + (s.i + 1) + '</b>' + (segs > 1 ? ' (tratto ' + (s.k + 1) + ')' : '') + '</span>';
-        h += '<span class="small muted">' + (gps.adjusted ? 'Ceppo scelto a mano. ' : 'Incertezza circa ±' + Math.ceil(f.acc / g.inter) + ' filari e ±' + Math.ceil(f.acc / g.rw) + ' ceppi: correggi con le frecce. ') + (m ? 'Ora: ' + (m === "f" ? 'fallanza' : 'sintomi') + '.' : '') + '</span>';
+        h += '<span class="small muted">' + (gps.adjusted ? 'Ceppo scelto a mano. ' : 'Incertezza circa ±' + Math.ceil(f.acc / g.inter) + ' filari e ±' + Math.ceil(f.acc / g.rw) + ' ceppi: correggi con le frecce. ') + (m ? 'Ora: ' + (m === "f" ? 'fallanza' : m === "n" ? 'rimpiazzato' : 'sintomi') + '.' : '') + '</span>';
         h += '<div class="row" style="align-items:flex-start;gap:14px"><div class="mp-arrows"><span></span><button data-mp="sel" data-r="-1" aria-label="Filare precedente">▲</button><span></span><button data-mp="sel" data-c="-1" aria-label="Ceppo precedente">◀</button><button data-mp="selGps" aria-label="Torna alla posizione GPS" style="font-size:13px">GPS</button><button data-mp="sel" data-c="1" aria-label="Ceppo successivo">▶</button><span></span><button data-mp="sel" data-r="1" aria-label="Filare successivo">▼</button><span></span></div>';
-        h += '<div class="stack" style="gap:6px;flex:1;min-width:140px"><button class="btn danger" data-mp="mark" data-v="f">Segna fallanza</button><button class="btn" data-mp="mark" data-v="s">Segna sintomi</button>' + (m ? '<button class="btn sm" data-mp="mark" data-v="">Togli segno</button>' : '') + '</div></div>';
+        h += '<div class="stack" style="gap:6px;flex:1;min-width:140px"><button class="btn danger" data-mp="mark" data-v="f">Segna fallanza</button><button class="btn" data-mp="mark" data-v="s">Segna sintomi</button>' + (m === "f" ? '<button class="btn primary" data-mp="mark" data-v="n">Rimpiazzata</button>' : '') + (m ? '<button class="btn sm" data-mp="mark" data-v="">Togli segno</button>' : '') + '</div></div>';
       }
     }
     h += '<label class="row small" style="font-weight:600"><input id="mpFollow" type="checkbox"' + (gps.follow ? ' checked' : '') + '> Segui la mia posizione</label></div>';
@@ -542,7 +542,9 @@
       case "selGps": gps.adjusted = false; gps.sel = locate(); Q.render(); return;
       case "mark": {
         var s = gps.sel; if (!s || s.ri == null) return;
-        var v = b.getAttribute("data-v"); Q.setMark(s.plot, s.ri + ":" + s.k + ":" + s.i, v || null);
+        var v = b.getAttribute("data-v");
+        if (v === "n" && window.QOInv) { window.QOInv.replace(Q.plotById(s.plot), [s.ri + ":" + s.k + ":" + s.i]); return; }
+        Q.setMark(s.plot, s.ri + ":" + s.k + ":" + s.i, v || null);
         Q.toast(v === "f" ? "Fallanza segnata: filare " + (s.ri + 1) + ", ceppo " + (s.i + 1) : v === "s" ? "Sintomi segnati: filare " + (s.ri + 1) + ", ceppo " + (s.i + 1) : "Segno tolto");
         return;
       }

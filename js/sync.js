@@ -155,9 +155,12 @@ function decode() {
   const plans = Object.entries(remote.piani || {}).map(([id, d]) => { const o = strip(id, d); o.done = o.done || []; return o; });
   const samples = Object.entries(remote.campioni || {}).map(([id, d]) => strip(id, d));
   const g = (remote.impostazioni || {}).geo;
+  const mg = (remote.impostazioni || {}).magazzino || {};
   const inv = {
     items: Object.entries(remote.articoli || {}).map(([id, d]) => strip(id, d)),
-    moves: Object.entries(remote.movimenti || {}).map(([id, d]) => strip(id, d))
+    moves: Object.entries(remote.movimenti || {}).map(([id, d]) => strip(id, d)),
+    maps: mg.maps || {},
+    fatture: mg.fatture || []
   };
   return { plots, plans, samples, geo: g && g.geo ? g.geo : null, marksMeta, inv };
 }
@@ -177,6 +180,7 @@ function encode(S) {
   const inv = S.inv || { items: [], moves: [] };
   inv.items.forEach((it) => { const d = Object.assign({}, it); delete d.id; out.articoli[it.id] = clean(d); });
   inv.moves.forEach((m) => { const d = Object.assign({}, m); delete d.id; out.movimenti[m.id] = clean(d); });
+  out.impostazioni.magazzino = clean({ maps: inv.maps || {}, fatture: inv.fatture || [] });
   return out;
 }
 function applyAll() {

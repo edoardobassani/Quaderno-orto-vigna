@@ -51,6 +51,9 @@ Ruoli:
 - **Conteggio**: si scrive quanto c'è davvero e l'app registra la differenza.
 - **Avvisi**: sotto la scorta minima, prodotti che mancano per i trattamenti dei prossimi 14 giorni, lotti in scadenza entro 60 giorni. Da questi nasce la lista "Da comprare".
 - **Prezzi**: prezzo medio pagato, valore del magazzino, costo di ogni trattamento.
+- **Fattura elettronica**: "Importa fattura" legge il file XML della fattura (anche firmato, .xml.p7m) senza AI e senza chiavi. Si abbina ogni riga a un articolo, con la conversione delle unità (es. 1 sacco = 10 kg); l'app ricorda gli abbinamenti per fornitore e avvisa se la fattura è già stata caricata. Le note di credito diventano resi.
+- **Codici a barre**: "Scansiona codice" usa la fotocamera (lettore del telefono o libreria ZXing) e apre l'articolo associato al codice; un codice nuovo si associa a un articolo esistente o a uno nuovo.
+- **Barbatelle e fallanze**: in Vigna il modo "Rimpiazza" (o "Rimpiazza tutte le fallanze") segna i ceppi come rimpiazzati e scala le barbatelle della parcella. Le fallanze segnate contano nel fabbisogno di barbatelle e nella lista da comprare.
 
 ## Foto aeree vostre
 
