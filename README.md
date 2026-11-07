@@ -35,7 +35,7 @@ Ruoli:
 
 1. Nel repository: **Settings → Pages**.
 2. In *Build and deployment* scegli **Deploy from a branch**, ramo **main**, cartella **/ (root)**, poi **Save**.
-3. Dopo un paio di minuti l'app è su `https://edoardobassani.github.io/quaderno-orto-vigna/`.
+3. Dopo un paio di minuti l'app è su `https://edoardobassani.github.io/Quaderno-orto-vigna/`.
 
 ## 2. Creare il progetto Firebase
 
