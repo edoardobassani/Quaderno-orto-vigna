@@ -124,7 +124,11 @@ Se l'azienda è su più corpi separati, in **Vigna → Terreni e confini** crei 
 
 - **Confine**: dà gli ettari aziendali. Si importa da file (KML, GPX, GeoJSON), si disegna sulla mappa o si registra camminando col GPS. Con "Assegna le parcelle dentro il confine" le parcelle già presenti finiscono nel terreno giusto.
 - **Importa confine e terrazze**: un file con tante forme apre un riepilogo. La forma più grande che contiene le altre è proposta come confine, le altre come terrazze; puoi cambiare ogni voce o ignorarla. Se reimporti lo stesso file, le terrazze con lo stesso nome vengono solo aggiornate nella forma.
+- **Numero di filari**: se lo scrivi in "Modifica dati", l'app li distribuisce sulla larghezza della parcella e calcola la distanza tra filari. Lasciato vuoto, li calcola dalla distanza.
+- **Orientamento**: di base i filari sono paralleli al lato più lungo della parcella. Le parcelle che avevano già segni sui ceppi mantengono l'orientamento che avevano, per non spostare i segni.
 - **Filari di ogni terrazza** (in "Modifica dati"): *dritti e paralleli* con l'orientamento che scegli, *lungo la terrazza* (seguono la curva, quanti ne stanno con la distanza tra filari), oppure *inseriti a mano*, filare per filare con il numero di ceppi. Puoi scegliere da che numero parte la numerazione dei filari.
+
+Le mappe delle parcelle si ingrandiscono con due dita (o con la rotella del mouse).
 
 Il meteo per ora è unico per tutta l'azienda.
 

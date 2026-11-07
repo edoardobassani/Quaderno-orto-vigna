@@ -426,12 +426,27 @@ function fitView(key,b,margin){VIEWS[key]={x:b.x0-margin,y:b.y0-margin,w:(b.x1-b
 function vbOf(key){var v=VIEWS[key],a=v.aspect||0.68,w=Math.max(v.w,v.h/a),h=w*a,cx=v.x+v.w/2,cy=v.y+v.h/2;return {x:cx-w/2,y:cy-h/2,w:w,h:h}}
 function zoom(key,f){var v=vbOf(key),cx=v.x+v.w/2,cy=v.y+v.h/2;VIEWS[key]={x:cx-v.w*f/2,y:cy-v.h*f/2,w:v.w*f,h:v.h*f,aspect:v.h/v.w}}
 function svgPt(svg,e){var p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;var m=svg.getScreenCTM();if(!m)return [0,0];var r=p.matrixTransform(m.inverse());return [r.x,r.y]}
+/* trascina per spostare, due dita (o rotella) per ingrandire; tocco singolo = azione */
 function bindPan(svg,key,onTap){
-  var st=null;
-  svg.addEventListener("pointerdown",function(e){st={x:e.clientX,y:e.clientY,v:vbOf(key),moved:false,t:e.target};try{svg.setPointerCapture(e.pointerId)}catch(_){}});
-  svg.addEventListener("pointermove",function(e){if(!st)return;var dx=e.clientX-st.x,dy=e.clientY-st.y;if(!st.moved&&Math.hypot(dx,dy)<7)return;st.moved=true;var k=st.v.w/(svg.getBoundingClientRect().width||svg.clientWidth);VIEWS[key]={x:st.v.x-dx*k,y:st.v.y-dy*k,w:st.v.w,h:st.v.h,aspect:st.v.h/st.v.w};var v=VIEWS[key];svg.setAttribute("viewBox",v.x+" "+v.y+" "+v.w+" "+v.h)});
-  svg.addEventListener("pointerup",function(e){if(st&&!st.moved)onTap(svgPt(svg,e),{target:st.t});st=null});
-  svg.addEventListener("pointercancel",function(){st=null});
+  var P={},st=null,pz=null,redraw=null;
+  function setV(v){VIEWS[key]=v;svg.setAttribute("viewBox",v.x+" "+v.y+" "+v.w+" "+v.h)}
+  function later(){clearTimeout(redraw);redraw=setTimeout(function(){if(svg.isConnected&&!pts().length)render()},180)}
+  function pts(){return Object.keys(P).map(function(k){return P[k]})}
+  function zoomAt(v,f,cx,cy,r){var w=Math.max(2,Math.min(8000,v.w*f));f=w/v.w;var px=v.x+(cx-r.left)/r.width*v.w,py=v.y+(cy-r.top)/r.height*v.h;return {x:px-(px-v.x)*f,y:py-(py-v.y)*f,w:w,h:v.h*f,aspect:v.h/v.w}}
+  svg.addEventListener("pointerdown",function(e){P[e.pointerId]={x:e.clientX,y:e.clientY};try{svg.setPointerCapture(e.pointerId)}catch(_){}
+    var a=pts();
+    if(a.length===1)st={x:e.clientX,y:e.clientY,v:vbOf(key),moved:false,t:e.target};
+    else if(a.length===2){var r=svg.getBoundingClientRect();pz={d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)||1,mx:(a[0].x+a[1].x)/2,my:(a[0].y+a[1].y)/2,v:vbOf(key),r:r};if(st)st.moved=true}});
+  svg.addEventListener("pointermove",function(e){if(!P[e.pointerId])return;P[e.pointerId]={x:e.clientX,y:e.clientY};var a=pts();
+    if(pz&&a.length>=2){var d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)||1,mx=(a[0].x+a[1].x)/2,my=(a[0].y+a[1].y)/2,v=zoomAt(pz.v,pz.d/d,pz.mx,pz.my,pz.r),k=v.w/pz.r.width;v.x-=(mx-pz.mx)*k;v.y-=(my-pz.my)*k;setV(v);return}
+    if(!st)return;var dx=e.clientX-st.x,dy=e.clientY-st.y;if(!st.moved&&Math.hypot(dx,dy)<7)return;st.moved=true;var k2=st.v.w/(svg.getBoundingClientRect().width||svg.clientWidth);setV({x:st.v.x-dx*k2,y:st.v.y-dy*k2,w:st.v.w,h:st.v.h,aspect:st.v.h/st.v.w})});
+  function up(e,cancel){var was=pts().length;delete P[e.pointerId];
+    if(was===1&&st){if(!st.moved&&!cancel)onTap(svgPt(svg,e),{target:st.t});else if(st.moved)later();st=null;return}
+    if(was>=2){pz=null;st=null;var a=pts();if(a.length===1)st={x:a[0].x,y:a[0].y,v:vbOf(key),moved:true,t:null};later()}
+    if(!pts().length)st=null}
+  svg.addEventListener("pointerup",function(e){up(e,false)});
+  svg.addEventListener("pointercancel",function(e){up(e,true)});
+  svg.addEventListener("wheel",function(e){e.preventDefault();setV(zoomAt(vbOf(key),e.deltaY>0?1.15:1/1.15,e.clientX,e.clientY,svg.getBoundingClientRect()));later()},{passive:false});
 }
 
 /* ---------- stato UI ---------- */
@@ -695,7 +710,7 @@ function vOggi(){
 var STAGES=[["riposo","Riposo vegetativo",0],["germ","Germogliamento",9],["foglie","Foglie distese",15],["grapp","Grappoli visibili",53],["fior","Piena fioritura",65],["alleg","Allegagione",71],["chius","Chiusura grappolo",79],["invai","Invaiatura",83],["matur","Maturazione",89],["cadu","Caduta foglie",93]];
 var STN={};STAGES.forEach(function(s){STN[s[0]]=s});
 var FORME=["Guyot","Cordone speronato","Alberello","Pergola","Doppio capovolto","Altro"];
-function vineDefaults(o){o=o||{};return {varieta:o.varieta||"",port:o.port||"",anno:+o.anno||new Date().getFullYear(),forma:o.forma||"Guyot",inter:+o.inter||2.5,row:+o.row||0.9,ori:o.ori==null||o.ori===""?0:+o.ori,barb:o.barb||"",rmode:o.rmode||"auto",r0:+o.r0||1,mrows:(o.mrows||[]).map(function(r){return {c:+r.c||0,len:+r.len||0}}),marks:{},phen:[]}}
+function vineDefaults(o){o=o||{};return {varieta:o.varieta||"",port:o.port||"",anno:+o.anno||new Date().getFullYear(),forma:o.forma||"Guyot",inter:+o.inter||2.5,row:+o.row||0.9,ori:o.ori==null||o.ori===""?0:+o.ori,barb:o.barb||"",rmode:o.rmode||"auto",r0:+o.r0||1,nrows:+o.nrows||0,oriAuto:o.oriAuto!=null?!!o.oriAuto:(o.ori==null||o.ori===""),mrows:(o.mrows||[]).map(function(r){return {c:+r.c||0,len:+r.len||0}}),marks:{},phen:[]}}
 function vignes(){return S.plots.filter(function(p){return p.type==="vigna"&&p.vine})}
 /* ---- terreni (corpi aziendali separati) ---- */
 function terreni(){return S.terreni||(S.terreni=[])}
@@ -712,22 +727,28 @@ function terBar(){if(!terreni().length)return "";var t=terSel();return '<div cla
 var VC={};
 function vdot(a,b){return a[0]*b[0]+a[1]*b[1]}
 function vineGeo(p){
-  var V=p.vine,mode=V.rmode||"auto",key=JSON.stringify([p.pts,V.inter,V.row,V.ori,mode,mode==="man"?V.mrows:0]);if(VC[p.id]&&VC[p.id].key===key)return VC[p.id];
+  var V=p.vine,mode=V.rmode||"auto";
+  /* parcelle già esistenti: orientamento automatico solo se non hanno ancora segni sui ceppi (così i segni non si spostano) */
+  if(V.oriAuto==null)V.oriAuto=!Object.keys(V.marks||{}).length;
+  var key=JSON.stringify([p.pts,V.inter,V.row,V.ori,mode,mode==="man"?V.mrows:0,+V.nrows||0,!!V.oriAuto]);if(VC[p.id]&&VC[p.id].key===key)return VC[p.id];
   var g=mode==="auto"?vineGeoStraight(p):vineGeoCurve(p,mode);g.key=key;g.mode=mode;VC[p.id]=g;return g;
 }
 /* filari dritti e paralleli, con orientamento dato */
+/* direzione del lato più lungo, in gradi da Nord (0–179) */
+function longestEdgeAngle(pts){var best=0,bl=-1;for(var i=0;i<pts.length;i++){var a=pts[i],b=pts[(i+1)%pts.length],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy);if(L>bl){bl=L;best=Math.atan2(dx,-dy)*180/Math.PI}}best=((best%180)+180)%180;return Math.round(best*10)/10}
 function vineGeoStraight(p){
-  var V=p.vine,th=V.ori*Math.PI/180,d=[Math.sin(th),-Math.cos(th)],n=[Math.cos(th),Math.sin(th)];
+  var V=p.vine,deg=V.oriAuto?longestEdgeAngle(p.pts):+V.ori||0,th=deg*Math.PI/180,d=[Math.sin(th),-Math.cos(th)],n=[Math.cos(th),Math.sin(th)];
   var inter=Math.max(0.5,+V.inter||2.5),rw=Math.max(0.2,+V.row||0.9);
   var ss=p.pts.map(function(q){return vdot(q,n)}),smin=Math.min.apply(null,ss),smax=Math.max.apply(null,ss),rows=[],tot=0,len=0;
-  for(var s=smin+inter/2;s<smax&&rows.length<4000;s+=inter){
+  if(+V.nrows>0)inter=Math.max(0.2,(smax-smin)/Math.round(+V.nrows));
+  for(var s=smin+inter/2;s<smax-1e-6&&rows.length<4000;s+=inter){
     var ts=[];
     for(var i=0;i<p.pts.length;i++){var a=p.pts[i],b=p.pts[(i+1)%p.pts.length],sa=vdot(a,n),sb=vdot(b,n);if((sa<=s&&sb>s)||(sb<=s&&sa>s)){var u=(s-sa)/(sb-sa);ts.push(vdot([a[0]+u*(b[0]-a[0]),a[1]+u*(b[1]-a[1])],d))}}
     ts.sort(function(x,y){return x-y});var segs=[];
     for(var k=0;k+1<ts.length;k+=2){var L=ts[k+1]-ts[k],c=Math.floor(L/rw);if(c>0){segs.push({t0:ts[k],t1:ts[k+1],c:c,off:rw/2,sp:rw});tot+=c;len+=L}}
     rows.push({s:s,segs:segs});
   }
-  return {d:d,n:n,rows:rows,smin:smin,inter:inter,rw:rw,ceppi:tot,len:len};
+  return {d:d,n:n,rows:rows,smin:smin,inter:inter,rw:rw,ceppi:tot,len:len,ori:deg};
 }
 /* asse lungo di una forma: l'orientamento con la larghezza minima */
 function longAxis(pts){var best=0,bw=1e18;for(var a=0;a<180;a+=1){var th=a*Math.PI/180,n=[Math.cos(th),Math.sin(th)],mn=1e18,mx=-1e18;pts.forEach(function(q){var v=vdot(q,n);if(v<mn)mn=v;if(v>mx)mx=v});if(mx-mn<bw){bw=mx-mn;best=a}}return best}
@@ -742,7 +763,7 @@ function vineGeoCurve(p,mode){
     if(ss.length>=2){var lo=Math.min.apply(null,ss),hi=Math.max.apply(null,ss);st.push({t:t,lo:lo,hi:hi});wsum+=hi-lo}}
   var Lm=0;for(var q0=1;q0<st.length;q0++){var A=st[q0-1],B=st[q0];Lm+=Math.hypot((A.lo+A.hi)/2-(B.lo+B.hi)/2,A.t-B.t)}
   /* larghezza media = superficie / lunghezza della linea di mezzo (giusta anche per le terrazze curve) */
-  var W=Lm>0?area(p.pts)/Lm:(st.length?wsum/st.length:0),man=mode==="man"?(V.mrows||[]):null,N=man?man.length:Math.max(1,Math.round(W/inter)),rows=[],tot=0,len=0;
+  var W=Lm>0?area(p.pts)/Lm:(st.length?wsum/st.length:0),man=mode==="man"?(V.mrows||[]):null,N=man?man.length:+V.nrows>0?Math.round(+V.nrows):Math.max(1,Math.round(W/inter)),rows=[],tot=0,len=0;
   for(var j=0;j<N;j++){
     var poly=st.map(function(o){var s=o.lo+(j+0.5)/N*(o.hi-o.lo);return [s*n[0]+o.t*d[0],s*n[1]+o.t*d[1]]}),cum=[0];
     for(var q=1;q<poly.length;q++)cum.push(cum[q-1]+Math.hypot(poly[q][0]-poly[q-1][0],poly[q][1]-poly[q-1][1]));
@@ -822,8 +843,11 @@ function vVigna(){
   return h+({parcelle:vParcelle,difesa:vDifesa,botte:vBotte,registro:vRegistro,matur:vMatur})[UI.vtab]();
 }
 function vFormHtml(){
+  var f0=UI.vedit,pp0=f0.id&&plotById(f0.id);f0.autoN=null;f0.autoOri=null;f0.realInter=null;
+  if(pp0&&f0.rmode!=="man"){var tv=Object.assign({},pp0.vine,{inter:f0.inter,row:f0.row,ori:f0.ori,nrows:0,oriAuto:f0.oriAuto}),tp={id:"_t",pts:pp0.pts,vine:tv},gf=function(){return f0.rmode==="curva"?vineGeoCurve(tp,"curva"):vineGeoStraight(tp)};
+    f0.autoN=gf().rows.filter(function(r){return r.segs.length}).length;f0.autoOri=longestEdgeAngle(pp0.pts);if(+f0.nrows>0){tv.nrows=f0.nrows;f0.realInter=gf().inter}}
   var f=UI.vedit,isNew=!f.id,h='<div class="panel stack" style="border:2px solid var(--vigna)"><h2>'+(isNew?'Nuova parcella':'Dati della parcella')+'</h2>';
-  h+='<div class="grid2"><label class="f">Nome<input id="vfName" value="'+esc(f.name)+'"></label><label class="f">Varietà<input id="vfVar" value="'+esc(f.varieta)+'" placeholder="es. Sangiovese"></label><label class="f">Portinnesto<input id="vfPort" value="'+esc(f.port)+'" placeholder="es. 1103 Paulsen"></label><label class="f">Anno d\'impianto<input id="vfAnno" type="number" inputmode="numeric" value="'+f.anno+'"></label><label class="f">Forma di allevamento<select id="vfForma">'+FORME.map(function(x){return '<option'+(x===f.forma?' selected':'')+'>'+x+'</option>'}).join("")+'</select></label><label class="f">Filari<select id="vfMode">'+[["auto","Dritti e paralleli"],["curva","Lungo la terrazza (automatici)"],["man","Inseriti a mano"]].map(function(x){return '<option value="'+x[0]+'"'+((f.rmode||"auto")===x[0]?' selected':'')+'>'+x[1]+'</option>'}).join("")+'</select></label><label class="f">Numero del primo filare<input id="vfR0" type="number" inputmode="numeric" value="'+(f.r0||1)+'"></label>'+(terreni().length?'<label class="f">Terreno<select id="vfTer"><option value="">Nessuno</option>'+terreni().map(function(t){return '<option value="'+t.id+'"'+(f.ter===t.id?' selected':'')+'>'+esc(t.name)+'</option>'}).join("")+'</select></label>':'')+((f.rmode||"auto")==="auto"?'<label class="f">Orientamento filari (° da Nord)<input id="vfOri" type="number" inputmode="numeric" value="'+f.ori+'"></label>':'')+'<label class="f">Distanza tra filari (m)<input id="vfInter" type="number" inputmode="decimal" step="0.05" value="'+f.inter+'"></label><label class="f">Distanza sulla fila (m)<input id="vfRow" type="number" inputmode="decimal" step="0.05" value="'+f.row+'"></label>'+(window.QOInv?'<label class="f" style="grid-column:1/-1">Barbatelle per i rimpiazzi<select id="vfBarb">'+window.QOInv.barbOptions(f.barb)+'</select></label>':'')+'</div>';
+  h+='<div class="grid2"><label class="f">Nome<input id="vfName" value="'+esc(f.name)+'"></label><label class="f">Varietà<input id="vfVar" value="'+esc(f.varieta)+'" placeholder="es. Sangiovese"></label><label class="f">Portinnesto<input id="vfPort" value="'+esc(f.port)+'" placeholder="es. 1103 Paulsen"></label><label class="f">Anno d\'impianto<input id="vfAnno" type="number" inputmode="numeric" value="'+f.anno+'"></label><label class="f">Forma di allevamento<select id="vfForma">'+FORME.map(function(x){return '<option'+(x===f.forma?' selected':'')+'>'+x+'</option>'}).join("")+'</select></label><label class="f">Filari<select id="vfMode">'+[["auto","Dritti e paralleli"],["curva","Lungo la terrazza (automatici)"],["man","Inseriti a mano"]].map(function(x){return '<option value="'+x[0]+'"'+((f.rmode||"auto")===x[0]?' selected':'')+'>'+x[1]+'</option>'}).join("")+'</select></label><label class="f">Numero del primo filare<input id="vfR0" type="number" inputmode="numeric" value="'+(f.r0||1)+'"></label>'+(terreni().length?'<label class="f">Terreno<select id="vfTer"><option value="">Nessuno</option>'+terreni().map(function(t){return '<option value="'+t.id+'"'+(f.ter===t.id?' selected':'')+'>'+esc(t.name)+'</option>'}).join("")+'</select></label>':'')+((f.rmode||"auto")!=="man"?'<label class="f">Numero di filari<input id="vfNRows" type="number" inputmode="numeric" min="0" value="'+(+f.nrows>0?f.nrows:'')+'" placeholder="automatico'+(f.autoN?' ('+f.autoN+')':'')+'"></label>':'')+((f.rmode||"auto")==="auto"?'<label class="f" style="grid-column:1/-1;flex-direction:row;align-items:center;gap:8px"><input id="vfOriAuto" type="checkbox"'+(f.oriAuto?' checked':'')+' style="width:auto"> Filari paralleli al lato più lungo'+(f.autoOri!=null?' ('+num(f.autoOri,0)+'° da Nord)':'')+'</label>'+(f.oriAuto?'':'<label class="f">Orientamento filari (° da Nord)<input id="vfOri" type="number" inputmode="numeric" value="'+f.ori+'"></label>'):'')+'<label class="f">Distanza tra filari (m)<input id="vfInter" type="number" inputmode="decimal" step="0.05" value="'+(+f.nrows>0&&f.rmode!=="man"&&f.realInter?Math.round(f.realInter*100)/100:f.inter)+'"'+(+f.nrows>0&&f.rmode!=="man"?' disabled':'')+'>'+(+f.nrows>0&&f.rmode!=="man"&&f.realInter?'<span class="small muted">con '+f.nrows+' filari risulta '+num(f.realInter,2)+' m</span>':'')+'</label><label class="f">Distanza sulla fila (m)<input id="vfRow" type="number" inputmode="decimal" step="0.05" value="'+f.row+'"></label>'+(window.QOInv?'<label class="f" style="grid-column:1/-1">Barbatelle per i rimpiazzi<select id="vfBarb">'+window.QOInv.barbOptions(f.barb)+'</select></label>':'')+'</div>';
   if(f.rmode==="man"){
     var mr=f.mrows||[],tc=mr.reduce(function(a,r){return a+(+r.c||0)},0);
     h+='<div class="sep"></div><div class="row" style="justify-content:space-between"><h3>Filari a mano</h3><span class="small muted">'+mr.length+' filari · '+tc.toLocaleString("it-IT")+' ceppi</span></div><span class="small muted">I filari vengono disposti lungo la terrazza nell\'ordine dell\'elenco: il primo è quello più a monte o più a valle, a seconda di come numerate voi.</span>';
@@ -855,9 +879,9 @@ function vParcelle(){
   var p=plotById(UI.vsel);if(!p)return h;var st=vineStats(p),V=p.vine,sg=stageOf(p);
   h+='<div class="row" style="justify-content:space-between;margin:16px 0 8px"><h2>'+esc(p.name)+'</h2><button class="btn sm" data-act="vEdit">Modifica dati</button></div>';
   h+='<div class="row" style="margin-bottom:8px">'+[["vista","Vista"],["f","Segna fallanza"],["s","Segna sintomi"],["n","Rimpiazza"],["ok","Togli segno"]].map(function(m){return '<button class="btn sm" data-act="vMode" data-m="'+m[0]+'" aria-pressed="'+(UI.vmode===m[0])+'">'+m[1]+'</button>'}).join("")+'</div>';
-  h+='<div class="mapwrap"><svg id="vinesvg" role="img" aria-label="Filari e ceppi della parcella"></svg><div class="zoom"><button data-act="zin" data-k="vine-'+p.id+'" aria-label="Ingrandisci">+</button><button data-act="zout" data-k="vine-'+p.id+'" aria-label="Rimpicciolisci">−</button><button data-act="zfit" data-k="vine-'+p.id+'" aria-label="Adatta" style="font-size:13px">⤢</button></div><div class="hint">'+(UI.vmode==="vista"?'Ingrandisci per vedere i ceppi, tocca un ceppo per sapere filare e numero.':'Tocca un ceppo per '+(UI.vmode==="f"?'segnarlo come fallanza':UI.vmode==="s"?'segnare sintomi':UI.vmode==="n"?'segnarlo come rimpiazzato con una barbatella nuova':'togliere il segno')+'.')+'</div></div>';
+  h+='<div class="mapwrap"><svg id="vinesvg" role="img" aria-label="Filari e ceppi della parcella"></svg><div class="zoom"><button data-act="zin" data-k="vine-'+p.id+'" aria-label="Ingrandisci">+</button><button data-act="zout" data-k="vine-'+p.id+'" aria-label="Rimpicciolisci">−</button><button data-act="zfit" data-k="vine-'+p.id+'" aria-label="Adatta" style="font-size:13px">⤢</button></div><div class="hint">'+(UI.vmode==="vista"?'Allarga con due dita per vedere i ceppi, tocca un ceppo per sapere filare e numero.':'Tocca un ceppo per '+(UI.vmode==="f"?'segnarlo come fallanza':UI.vmode==="s"?'segnare sintomi':UI.vmode==="n"?'segnarlo come rimpiazzato con una barbatella nuova':'togliere il segno')+'.')+'</div></div>';
   h+='<div class="panel stack" style="margin-top:10px"><div class="kv"><div><span>Superficie</span><b>'+num(st.ha,2)+' ha</b></div><div><span>Filari</span><b>'+st.filari+'</b></div><div><span>Ceppi</span><b>'+st.ceppi.toLocaleString("it-IT")+'</b></div><div><span>Ceppi/ha</span><b>'+Math.round(st.dens).toLocaleString("it-IT")+'</b></div><div><span>Metri di filare</span><b>'+Math.round(st.len).toLocaleString("it-IT")+'</b></div><div><span>Sesto</span><b>'+num(V.inter,2)+' × '+num(V.row,2)+'</b></div></div>';
-  h+='<div class="sep"></div><div class="small">'+esc(V.varieta||"Varietà non indicata")+(V.port?' su '+esc(V.port):'')+' · '+esc(V.forma)+' · impianto '+V.anno+' · '+(V.rmode==="man"?'filari inseriti a mano':V.rmode==="curva"?'filari lungo la terrazza':'filari a '+V.ori+'° da Nord')+((+V.r0||1)!==1?' · numerati da '+V.r0:'')+(p.ter&&terById(p.ter)?' · '+esc(terById(p.ter).name):'')+'</div>';
+  h+='<div class="sep"></div><div class="small">'+esc(V.varieta||"Varietà non indicata")+(V.port?' su '+esc(V.port):'')+' · '+esc(V.forma)+' · impianto '+V.anno+' · '+(V.rmode==="man"?'filari inseriti a mano':V.rmode==="curva"?'filari lungo la terrazza':V.oriAuto?'filari paralleli al lato lungo ('+num(vineGeo(p).ori,0)+'°)':'filari a '+V.ori+'° da Nord')+((+V.r0||1)!==1?' · numerati da '+V.r0:'')+(p.ter&&terById(p.ter)?' · '+esc(terById(p.ter).name):'')+'</div>';
   h+='<div class="row"><span class="badge '+(st.f?'b-bad':'b-n')+'">'+st.f+' fallanze</span><span class="badge '+(st.s?'b-warn':'b-n')+'">'+st.s+' con sintomi</span><span class="badge '+(st.n?'b-ok':'b-n')+'">'+st.n+' rimpiazzati</span></div>';
   if(window.QOInv)h+=window.QOInv.barbHtml(p,st);
   h+='</div>';
@@ -969,7 +993,7 @@ function vMatur(){
 }
 
 /* ---- azioni ---- */
-function readVForm(){var f=UI.vedit;if(!f)return;var g=function(i){var el=$(i);return el?el.value:null};f.name=(g("#vfName")||"Parcella").trim();f.varieta=g("#vfVar")||"";f.port=g("#vfPort")||"";f.anno=parseInt(g("#vfAnno"),10)||today().getFullYear();f.forma=g("#vfForma")||"Guyot";f.ori=parseFloat(g("#vfOri"))||0;f.inter=parseFloat(g("#vfInter"))||2.5;f.row=parseFloat(g("#vfRow"))||0.9;if($("#vfBarb"))f.barb=g("#vfBarb")||"";if($("#vfMode"))f.rmode=g("#vfMode");if($("#vfR0"))f.r0=parseInt(g("#vfR0"),10)||1;if($("#vfTer"))f.ter=g("#vfTer");if(f.mrows)f.mrows.forEach(function(r,j){if($("#mrC-"+j)){r.c=parseInt(g("#mrC-"+j),10)||0;r.len=parseFloat(g("#mrL-"+j))||0}});if($("#vfL")){f.L=parseFloat(g("#vfL"));f.W=parseFloat(g("#vfW"))}}
+function readVForm(){var f=UI.vedit;if(!f)return;var g=function(i){var el=$(i);return el?el.value:null};f.name=(g("#vfName")||"Parcella").trim();f.varieta=g("#vfVar")||"";f.port=g("#vfPort")||"";f.anno=parseInt(g("#vfAnno"),10)||today().getFullYear();f.forma=g("#vfForma")||"Guyot";f.ori=parseFloat(g("#vfOri"))||0;if($("#vfInter")&&!$("#vfInter").disabled)f.inter=parseFloat(g("#vfInter"))||2.5;f.row=parseFloat(g("#vfRow"))||0.9;if($("#vfBarb"))f.barb=g("#vfBarb")||"";if($("#vfMode"))f.rmode=g("#vfMode");if($("#vfNRows"))f.nrows=Math.max(0,parseInt(g("#vfNRows"),10)||0);if($("#vfOriAuto"))f.oriAuto=$("#vfOriAuto").checked;if($("#vfR0"))f.r0=parseInt(g("#vfR0"),10)||1;if($("#vfTer"))f.ter=g("#vfTer");if(f.mrows)f.mrows.forEach(function(r,j){if($("#mrC-"+j)){r.c=parseInt(g("#mrC-"+j),10)||0;r.len=parseFloat(g("#mrL-"+j))||0}});if($("#vfL")){f.L=parseFloat(g("#vfL"));f.W=parseFloat(g("#vfW"))}}
 function contentBottom(){var ex=[];S.plots.forEach(function(p){ex=ex.concat(p.pts)});return ex.length?bbox(ex):{x0:0,y1:-6}}
 var VACT={
   vOpen:function(b,id){UI.tab="vigna";UI.vtab="parcelle";UI.vsel=id},
@@ -980,12 +1004,12 @@ var VACT={
   bAll:function(b){var on=b.getAttribute("data-v")==="1";vignes().filter(inTer).forEach(function(p){if(on)S.botte.sel[p.id]=true;else delete S.botte.sel[p.id]});save()},
   mrAdd:function(){readVForm();var f=UI.vedit,n=Math.max(1,Math.min(200,parseInt($("#mrN").value,10)||1)),c=parseInt($("#mrNC").value,10)||0;f.mrows=f.mrows||[];for(var i=0;i<n;i++)f.mrows.push({c:c,len:0})},
   mrDel:function(b){readVForm();UI.vedit.mrows.splice(+b.getAttribute("data-j"),1)},
-  vNew:function(){UI.vedit={name:"Parcella "+(vignes().length+1),varieta:"",port:"",anno:today().getFullYear(),forma:"Guyot",inter:2.5,row:0.9,ori:0,L:100,W:50,rmode:"auto",r0:1,mrows:[],ter:terSel()};window.scrollTo(0,0)},
-  vEdit:function(){var p=plotById(UI.vsel),V=p.vine;UI.vedit={id:p.id,name:p.name,varieta:V.varieta,port:V.port,anno:V.anno,forma:V.forma,inter:V.inter,row:V.row,ori:V.ori,barb:V.barb||"",rmode:V.rmode||"auto",r0:V.r0||1,mrows:(V.mrows||[]).map(function(r){return {c:r.c,len:r.len}}),ter:p.ter||""};window.scrollTo(0,0)},
+  vNew:function(){UI.vedit={name:"Parcella "+(vignes().length+1),varieta:"",port:"",anno:today().getFullYear(),forma:"Guyot",inter:2.5,row:0.9,ori:0,L:100,W:50,rmode:"auto",r0:1,mrows:[],ter:terSel(),nrows:0,oriAuto:true};window.scrollTo(0,0)},
+  vEdit:function(){var p=plotById(UI.vsel),V=p.vine;UI.vedit={id:p.id,name:p.name,varieta:V.varieta,port:V.port,anno:V.anno,forma:V.forma,inter:V.inter,row:V.row,ori:V.ori,barb:V.barb||"",rmode:V.rmode||"auto",r0:V.r0||1,nrows:+V.nrows||0,oriAuto:!!V.oriAuto,mrows:(V.mrows||[]).map(function(r){return {c:r.c,len:r.len}}),ter:p.ter||""};window.scrollTo(0,0)},
   vCancel:function(){UI.vedit=null},
   vCreateRect:function(){readVForm();var f=UI.vedit;if(!(f.L>0&&f.W>0)){toast("Inserisci lunghezza e larghezza");return false}var bb=contentBottom(),p={id:uid(),name:f.name,type:"vigna",pts:rect(bb.x0,bb.y1+6,f.L,f.W),plants:[],vine:vineDefaults(f)};if(f.ter)p.ter=f.ter;S.plots.push(p);UI.vsel=p.id;S.sel=p.id;UI.vedit=null;delete VIEWS.map;save();toast("Parcella creata: "+num(f.L*f.W/1e4,2)+" ha")},
   vCreateDraw:function(){readVForm();UI.pendingVine=UI.vedit;UI.vedit=null;UI.tab="mappa";UI.draw={pts:[],closed:false,name:UI.pendingVine.name,type:"vigna",ter:UI.pendingVine.ter||""};var bb=contentBottom();if(bb.x1!=null)fitView("map",{x0:bb.x0,y0:bb.y0,x1:bb.x1+40,y1:bb.y1+40},6);toast("Tocca i vertici della parcella sulla mappa")},
-  vSave:function(){readVForm();var f=UI.vedit,p=plotById(f.id);p.name=f.name;["varieta","port","anno","forma","inter","row","ori","barb","rmode","r0"].forEach(function(k){p.vine[k]=f[k]});p.vine.mrows=(f.mrows||[]).map(function(r){return {c:r.c,len:r.len}});if(f.ter!=null){if(f.ter)p.ter=f.ter;else delete p.ter}delete VIEWS["vine-"+p.id];UI.vedit=null;save();toast("Parcella aggiornata")},
+  vSave:function(){readVForm();var f=UI.vedit,p=plotById(f.id);p.name=f.name;["varieta","port","anno","forma","inter","row","ori","barb","rmode","r0","nrows","oriAuto"].forEach(function(k){p.vine[k]=f[k]});p.vine.mrows=(f.mrows||[]).map(function(r){return {c:r.c,len:r.len}});if(f.ter!=null){if(f.ter)p.ter=f.ter;else delete p.ter}delete VIEWS["vine-"+p.id];UI.vedit=null;save();toast("Parcella aggiornata")},
   vDel:function(){if(UI.confirm!=="vdel"){UI.confirm="vdel";return}var id=UI.vedit.id;S.plans=S.plans.filter(function(x){return x.plot!==id});S.samples=(S.samples||[]).filter(function(x){return x.plot!==id});S.plots=S.plots.filter(function(x){return x.id!==id});UI.vedit=null;UI.confirm=null;UI.vsel=null;delete VIEWS.map;save()},
   vMode:function(b){UI.vmode=b.getAttribute("data-m")},
   vPhenAdd:function(){var p=plotById(UI.vsel),st=$("#vStage").value,d=$("#vStageDate").value||iso(today());p.vine.phen.push({st:st,date:d});p.vine.phen.sort(function(a,b){return a.date<b.date?-1:1});save();toast(STN[st][1]+" registrato")},
@@ -1006,6 +1030,7 @@ function vineChange(t){
   if(id==="bDose"||id==="bWater"||id==="bTank"||id==="bTit"){S.botte[{bDose:"dose",bWater:"water",bTank:"tank",bTit:"tit"}[id]]=parseFloat(t.value)||0;save();render();return true}
   if(id==="bUnit"){S.botte.unit=t.value;save();render();return true}
   if(id==="vmSel"){UI.vmSel=t.value;render();return true}
+  if(id==="vfOriAuto"||id==="vfNRows"){readVForm();render();return true}
   if(id==="vfMode"){readVForm();var f=UI.vedit;if(f.rmode==="man"&&!(f.mrows||[]).length){var pp=f.id&&plotById(f.id);if(pp){var gc=vineGeoCurve(pp,"curva");f.mrows=gc.rows.map(function(r){return {c:r.segs.length?r.segs[0].c:0,len:0}})}}render();return true}
   if(id==="vfFile"||id==="vfFile2"){
     var file=t.files&&t.files[0];if(!file)return true;readVForm();var form=UI.vedit;
