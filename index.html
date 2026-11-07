@@ -685,7 +685,6 @@ function vOggi(){
   if(rec.length){h+='<h2 style="margin:16px 0 8px">Attività recenti</h2><div class="panel stack" style="gap:6px">'+rec.slice(0,5).map(function(a){return '<div class="small"><b>'+esc(a.da)+'</b> · '+esc(a.testo)+(a.quando&&a.quando.toDate?' <span class="muted">· '+a.quando.toDate().toLocaleString("it-IT",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})+'</span>':'')+'</div>'}).join("")+'</div>'}
   /* azioni rapide */
   h+='<h2 style="margin:16px 0 8px">Azioni rapide</h2><div class="grid2">'+[["mappa","Dove sono in vigna"],["trattamenti:nuovo","Programma trattamento"],["magazzino","Magazzino e acquisti"],["vigna:matur","Campionamento"],["vigna:botte","Calcolo botte"],["libreria","Libreria prodotti"]].map(function(x){return '<button class="btn" data-act="homeGo" data-v="'+x[0]+'">'+x[1]+'</button>'}).join("")+'</div>';
-  h+='<h2 style="margin:16px 0 8px">Dimensione</h2><div class="panel">'+zoomLevelsHtml()+'</div>';
   return h;
 }
 /* =================== VIGNA =================== */
