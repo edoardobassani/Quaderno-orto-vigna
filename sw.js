@@ -1,6 +1,6 @@
 /* Service worker: rende l'app utilizzabile senza connessione.
    Ad ogni modifica dei file dell'app aumenta VERSION, così i telefoni scaricano la versione nuova. */
-const VERSION = "qo-v14";
+const VERSION = "qo-v15";
 const TILES = "qo-tiles-v1";
 const MAX_TILES = 4000;
 const SHELL = [
@@ -14,6 +14,7 @@ const SHELL = [
   "./js/meteo.js",
   "./js/prodotti.js",
   "./js/voce.js",
+  "./js/terreni.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/apple-touch-icon.png"

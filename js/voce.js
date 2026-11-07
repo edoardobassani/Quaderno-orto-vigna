@@ -34,10 +34,24 @@
   function numBefore(t, re) { var m = new RegExp("(\\d+(?:\\.\\d+)?)\\s*(?:" + re + ")").exec(t); return m ? parseFloat(m[1]) : null; }
 
   /* parcella: nominata nella frase, altrimenti quella dove sei col GPS, altrimenti quella aperta */
-  function plotWords(p) { return norm(p.name).replace(/\b(vigna|vigneto|campo|serra|orto|parcella|appezzamento|del|della|dei|di|la|il|lo|le|al|alla)\b/g, " ").split(" ").filter(function (w) { return w.length >= 3; }); }
+  var GENERIC = /\b(vigna|vigneto|campo|serra|orto|parcella|appezzamento|terrazza|terrazzo|del|della|dei|di|la|il|lo|le|al|alla|nel|nella)\b/g;
+  function rxEsc(x) { return x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+  function hasPhrase(t, ph) { ph = ph.trim(); return !!ph && new RegExp("(^|\\s)" + rxEsc(ph).replace(/\s+/g, "\\s+") + "(?=\\s|$)").test(t); }
+  /* punteggio di una parcella per la frase: nome intero, nome senza parole generiche, parole in comune (i numeri del nome devono esserci tutti) */
+  function plotScore(p, t) {
+    var full = words2num(norm(p.name)), core = full.replace(GENERIC, " ").replace(/\s+/g, " ").trim(), sc = 0;
+    if (hasPhrase(t, full)) sc = 3 + full.length / 100;
+    else if (core && hasPhrase(t, core) && (/\D/.test(core) || /terrazz/.test(t))) sc = 2 + core.length / 100;
+    else {
+      var ws = core.split(" ").filter(function (w) { return w.length >= 3 && !/^\d+$/.test(w); });
+      if (ws.length && !/\d/.test(core)) sc = ws.filter(function (w) { return t.indexOf(w) >= 0; }).length / ws.length;
+    }
+    if (sc) { var tt = p.ter && Q.terById(p.ter); if (tt && hasPhrase(t, words2num(norm(tt.name)).replace(GENERIC, " ").replace(/\s+/g, " ").trim())) sc += 0.6; if (p.ter && p.ter === Q.terSel()) sc += 0.3; }
+    return sc;
+  }
   function findPlot(t, vineOnly) {
     var list = S().plots.filter(function (p) { return !vineOnly || p.vine; }), best = null, bs = 0;
-    list.forEach(function (p) { var ws = plotWords(p), sc = ws.filter(function (w) { return t.indexOf(w) >= 0; }).length; if (ws.length && sc / ws.length > bs) { bs = sc / ws.length; best = p; } });
+    list.forEach(function (p) { var sc = plotScore(p, t); if (sc > bs) { bs = sc; best = p; } });
     if (best && bs >= 0.5) return { p: best, how: "nominata" };
     var g = window.QOMap && window.QOMap.currentPlot && window.QOMap.currentPlot();
     if (g) { var gp = Q.plotById(g.plot); if (gp && (!vineOnly || gp.vine)) return { p: gp, how: "GPS" + (g.acc ? " ±" + g.acc + " m" : ""), gps: g }; }
@@ -69,19 +83,19 @@
     if (mark && (filare == null || ceppo == null) && /\b(qui|questo|questa|dove sono)\b/.test(t)) {
       var gq = window.QOMap && window.QOMap.currentPlot && window.QOMap.currentPlot();
       if (!gq || gq.ri == null || gq.i == null) return { type: "err", text: "Per dire \"qui\" accendi il GPS nella Mappa e mettiti dentro una vigna. Altrimenti dì filare e ceppo." };
-      filare = gq.ri + 1; ceppo = gq.i + 1; tratto = gq.k + 1;
+      filare = Q.rowNo(Q.plotById(gq.plot), gq.ri); ceppo = gq.i + 1; tratto = gq.k + 1;
       t = t + " "; var gpl = Q.plotById(gq.plot);
       if (gpl) { var g0 = Q.vineGeo(gpl), lab0 = { f: "Fallanza", s: "Sintomi", n: "Rimpiazzo", x: "Togli segno" }[mark];
         return { type: "mark", mark: mark, plot: gpl, how: "GPS ±" + gq.acc + " m", key: gq.ri + ":" + gq.k + ":" + gq.i, label: lab0, desc: "Filare " + filare + ", ceppo " + ceppo + (g0.rows[gq.ri].segs.length > 1 ? ", tratto " + tratto : "") + " (il più vicino a te)" }; }
     }
     if (mark && filare != null && ceppo != null) {
       var fp = findPlot(t, true); if (!fp) return { type: "err", text: "Non so in quale vigna: dì il nome della parcella o apri la parcella prima di parlare." };
-      var g = Q.vineGeo(fp.p), ri = Math.round(filare) - 1, k = tratto != null ? Math.round(tratto) - 1 : 0, i = Math.round(ceppo) - 1;
-      if (!g.rows[ri] || !g.rows[ri].segs.length) return { type: "err", text: fp.p.name + " non ha il filare " + filare + " (i filari sono " + g.rows.filter(function (r) { return r.segs.length; }).length + ")." };
+      var g = Q.vineGeo(fp.p), ri = Math.round(filare) - Q.rowNo(fp.p, 0), k = tratto != null ? Math.round(tratto) - 1 : 0, i = Math.round(ceppo) - 1;
+      if (!g.rows[ri] || !g.rows[ri].segs.length) return { type: "err", text: fp.p.name + " non ha il filare " + filare + " (i filari vanno da " + Q.rowNo(fp.p, 0) + " a " + Q.rowNo(fp.p, g.rows.length - 1) + ")." };
       if (!g.rows[ri].segs[k]) k = 0;
       if (i < 0 || i >= g.rows[ri].segs[k].c) return { type: "err", text: "Nel filare " + filare + " di " + fp.p.name + " i ceppi vanno da 1 a " + g.rows[ri].segs[k].c + "." };
       var label = { f: "Fallanza", s: "Sintomi", n: "Rimpiazzo", x: "Togli segno" }[mark];
-      return { type: "mark", mark: mark, plot: fp.p, how: fp.how, key: ri + ":" + k + ":" + i, label: label, desc: "Filare " + (ri + 1) + ", ceppo " + (i + 1) + (g.rows[ri].segs.length > 1 ? ", tratto " + (k + 1) : "") };
+      return { type: "mark", mark: mark, plot: fp.p, how: fp.how, key: ri + ":" + k + ":" + i, label: label, desc: "Filare " + Q.rowNo(fp.p, ri) + ", ceppo " + (i + 1) + (g.rows[ri].segs.length > 1 ? ", tratto " + (k + 1) : "") };
     }
     if (/\b(campion|maturazion|brix|babo)\b/.test(t) && (/brix|grad|zucch/.test(t))) {
       var brix = numAfter(t, "brix|zuccheri|gradi") != null ? numAfter(t, "brix|zuccheri|gradi") : numBefore(t, "brix|gradi"), ac = numAfter(t, "acidita(?: totale)?|acido"), ph = numAfter(t, "ph|p h|piacca");

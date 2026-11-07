@@ -118,6 +118,16 @@ Il piano gratuito (Spark) basta per un'azienda con pochi utenti.
 3. **Invita un collega** con la sua email e il ruolo.
 4. Il collega apre il link dell'app, crea l'account **con la stessa email**, la conferma e trova l'invito nella barra in alto.
 
+## Terreni, confini e terrazze
+
+Se l'azienda è su più corpi separati, in **Vigna → Terreni e confini** crei un terreno per ognuno. In alto, nelle sezioni Vigna e Mappa, scegli se vedere tutto o un solo terreno.
+
+- **Confine**: dà gli ettari aziendali. Si importa da file (KML, GPX, GeoJSON), si disegna sulla mappa o si registra camminando col GPS. Con "Assegna le parcelle dentro il confine" le parcelle già presenti finiscono nel terreno giusto.
+- **Importa confine e terrazze**: un file con tante forme apre un riepilogo. La forma più grande che contiene le altre è proposta come confine, le altre come terrazze; puoi cambiare ogni voce o ignorarla. Se reimporti lo stesso file, le terrazze con lo stesso nome vengono solo aggiornate nella forma.
+- **Filari di ogni terrazza** (in "Modifica dati"): *dritti e paralleli* con l'orientamento che scegli, *lungo la terrazza* (seguono la curva, quanti ne stanno con la distanza tra filari), oppure *inseriti a mano*, filare per filare con il numero di ceppi. Puoi scegliere da che numero parte la numerazione dei filari.
+
+Il meteo per ora è unico per tutta l'azienda.
+
 ## Comandi vocali e note
 
 Il microfono in alto a destra, accanto ad **Aa**, apre il pannello vocale. Parli, l'app mostra cosa ha sentito e cosa farà, e salva solo quando tocchi **Conferma** (con **Correggi** sistemi la frase).

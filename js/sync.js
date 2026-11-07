@@ -142,6 +142,7 @@ function leave(toLocal) {
 function decode() {
   const plots = Object.entries(remote.parcelle || {}).map(([id, d]) => {
     const p = { id, name: d.name || "Area", type: d.type || "campo", pts: (d.pts || []).map((q) => [q.x, q.y]), plants: d.plants || [] };
+    if (d.ter) p.ter = d.ter;
     if (d.vine) p.vine = Object.assign({ phen: [] }, d.vine, { marks: {} });
     return p;
   }).sort((a, b) => a.name.localeCompare(b.name, "it"));
@@ -168,13 +169,16 @@ function decode() {
   const meteo = ms ? Object.assign({}, ms.cfg || {}, { months }) : (Object.keys(months).length ? { months } : null);
   const customProducts = {};
   Object.entries(remote.prodotti || {}).forEach(([id, d]) => { const o = Object.assign({}, d); META.forEach((k) => delete o[k]); customProducts[id] = o; });
+  const tl = (remote.impostazioni || {}).terreni;
+  const terreni = tl && tl.list ? tl.list.map((t) => ({ id: t.id, name: t.name, pts: t.pts ? t.pts.map((q) => [q.x, q.y]) : null })) : null;
   const notes = Object.entries(remote.note || {}).map(([id, d]) => strip(id, d)).sort((a, b) => (a.at < b.at ? -1 : 1));
-  return { plots, plans, samples, geo: g && g.geo ? g.geo : null, marksMeta, inv, meteo, customProducts, notes };
+  return { plots, plans, samples, geo: g && g.geo ? g.geo : null, marksMeta, inv, meteo, customProducts, notes, terreni };
 }
 function encode(S) {
   const out = { parcelle: {}, piani: {}, campioni: {}, segni: {}, impostazioni: {}, articoli: {}, movimenti: {}, meteo: {}, prodotti: {}, note: {} };
   (S.plots || []).forEach((p) => {
     const d = { name: p.name, type: p.type, pts: p.pts.map((q) => ({ x: q[0], y: q[1] })), plants: p.plants || [] };
+    if (p.ter) d.ter = p.ter;
     if (p.vine) {
       const v = Object.assign({}, p.vine); delete v.marks; d.vine = v;
       Object.keys(p.vine.marks || {}).forEach((k) => { out.segni[p.id + "__" + k.replace(/:/g, "-")] = { plot: p.id, key: k, stato: p.vine.marks[k] }; });
@@ -185,6 +189,7 @@ function encode(S) {
   (S.samples || []).forEach((s) => { const d = Object.assign({}, s); delete d.id; out.campioni[s.id] = clean(d); });
   (S.notes || []).forEach((n) => { const d = Object.assign({}, n); delete d.id; out.note[n.id] = clean(d); });
   out.impostazioni.geo = { geo: S.geo ? clean(S.geo) : null };
+  out.impostazioni.terreni = clean({ list: (S.terreni || []).map((t) => ({ id: t.id, name: t.name, pts: t.pts ? t.pts.map((q) => ({ x: q[0], y: q[1] })) : null })) });
   const inv = S.inv || { items: [], moves: [] };
   inv.items.forEach((it) => { const d = Object.assign({}, it); delete d.id; out.articoli[it.id] = clean(d); });
   inv.moves.forEach((m) => { const d = Object.assign({}, m); delete d.id; out.movimenti[m.id] = clean(d); });
@@ -206,7 +211,7 @@ function applyAll() {
   if (uploadPending) {
     const d = uploadPending; uploadPending = null;
     baseline = encode({ plots: [], plans: [], samples: [], geo: null, inv: { items: [], moves: [] } });
-    QO().applyRemote({ plots: d.plots || [], plans: d.plans || [], samples: d.samples || [], geo: d.geo || null, marksMeta: {}, inv: d.inv || { items: [], moves: [] }, notes: d.notes || [] });
+    QO().applyRemote({ plots: d.plots || [], plans: d.plans || [], samples: d.samples || [], geo: d.geo || null, marksMeta: {}, inv: d.inv || { items: [], moves: [] }, notes: d.notes || [], terreni: d.terreni || [] });
     doPush(QO().getState(), true);
     return;
   }
@@ -375,7 +380,7 @@ async function act(a, id) {
       case "create": {
         const nome = val("saAz"); if (!nome) { msg = "Dai un nome all'azienda."; break; }
         const up = document.getElementById("saUp").checked, st = QO().getState();
-        const copy = up ? clean({ plots: st.plots, plans: st.plans, samples: st.samples || [], geo: st.geo || null, inv: st.inv || { items: [], moves: [] }, notes: st.notes || [] }) : null;
+        const copy = up ? clean({ plots: st.plots, plans: st.plans, samples: st.samples || [], geo: st.geo || null, inv: st.inv || { items: [], moves: [] }, notes: st.notes || [], terreni: st.terreni || [] }) : null;
         const ref = await F.addDoc(F.collection(db, "aziende"), { nome, membri: { [user.uid]: "titolare" }, membriInfo: { [user.uid]: { nome: myName(), email: user.email || "" } }, creata: F.serverTimestamp() });
         enter({ id: ref.id, data: { nome, membri: { [user.uid]: "titolare" }, membriInfo: { [user.uid]: { nome: myName(), email: user.email || "" } } } }, copy);
         msg = "Azienda creata" + (up ? ": sto caricando i dati del dispositivo." : "."); break;

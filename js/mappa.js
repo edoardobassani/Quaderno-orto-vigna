@@ -28,6 +28,7 @@
   var imgs = [], imgLayers = {}, imgMsg = "", imgOpen = false, imgConfirm = null, busy = false;
 
   /* ---------------- utilità ---------------- */
+  var lastTer = null;
   function S() { return Q.getState(); }
   function $(s) { return document.querySelector(s); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
@@ -91,9 +92,15 @@
     loadImages();
   }
   function zoomClass() { if (el) el.classList.toggle("nolabels", map.getZoom() < 14.5); }
+  function terPts() {
+    var t = Q.terById(Q.terSel()); if (!t) return allPts();
+    var a = t.pts ? t.pts.slice() : []; S().plots.forEach(function (p) { if (p.ter === t.id) a = a.concat(p.pts); });
+    return a.length ? a : allPts();
+  }
   function fitAll() {
-    var b = null;
-    if (S().geo && S().plots.length) b = L.latLngBounds(allPts().map(toLL));
+    var b = null; lastTer = Q.terSel();
+    var pts = terPts();
+    if (S().geo && pts.length) b = L.latLngBounds(pts.map(toLL));
     else if (imgs.length) b = L.latLngBounds([imgs[0].c.tl, imgs[0].c.tr, imgs[0].c.bl]);
     if (b && b.isValid()) map.fitBounds(b.pad(0.15), { maxZoom: 19 });
   }
@@ -101,7 +108,7 @@
     if (!map) createMap();
     if (el.parentNode !== slot) slot.appendChild(el);
     map.invalidateSize();
-    if (!fitted) { fitAll(); fitted = true; }
+    if (!fitted || lastTer !== Q.terSel()) { fitAll(); fitted = true; }
     refresh(); zoomClass();
   }
 
@@ -112,10 +119,15 @@
     var st = S();
     if (st.geo) {
       var bad = cssVar("--bad"), warn = cssVar("--warn"), surf = cssVar("--surface");
+      Q.terreni().forEach(function (t) {
+        if (!t.pts || t.pts.length < 3) return;
+        lay.plots.addLayer(L.polygon(t.pts.map(toLL), { color: "#ffffff", weight: 2.5, dashArray: "8 6", fill: false, interactive: false }).bindTooltip(esc(t.name), { permanent: true, direction: "top", className: "qo-label" }));
+      });
       st.plots.forEach(function (p) {
         var col = tok(Q.stroke[p.type]), on = st.sel === p.id && !Q.ui.draw;
         var pg = L.polygon(p.pts.map(toLL), { color: col, weight: on ? 4 : 2, fillColor: col, fillOpacity: on ? 0.22 : 0.12 });
-        pg.bindTooltip(esc(p.name), { permanent: true, direction: "center", className: "qo-label" });
+        try { var lp = Q.labelPt(p.pts); lay.plots.addLayer(L.tooltip({ permanent: true, direction: "center", className: "qo-label", interactive: false }).setLatLng(toLL(lp)).setContent(esc(p.name))); }
+        catch (e) { pg.bindTooltip(esc(p.name), { permanent: true, direction: "center", className: "qo-label" }); }
         pg.on("click", function () { if (Q.ui.draw || place.on) return; st.sel = p.id; Q.save(); Q.render(); });
         lay.plots.addLayer(pg);
         if (p.vine) {
@@ -144,8 +156,7 @@
       var g = Q.vineGeo(p), M = p.vine.marks || {};
       g.rows.forEach(function (r, ri) {
         r.segs.forEach(function (sg, k) {
-          var a = [r.s * g.n[0] + sg.t0 * g.d[0], r.s * g.n[1] + sg.t0 * g.d[1]], b = [r.s * g.n[0] + sg.t1 * g.d[0], r.s * g.n[1] + sg.t1 * g.d[1]];
-          lay.rows.addLayer(L.polyline([toLL(a), toLL(b)], { renderer: canvasR, color: col, weight: 1.5, opacity: 0.8, interactive: false }));
+          lay.rows.addLayer(L.polyline(Q.rowLine(g, ri, k).map(toLL), { renderer: canvasR, color: col, weight: 1.5, opacity: 0.8, interactive: false }));
           if (z >= 20) for (var i = 0; i < sg.c; i++) {
             if (M[ri + ":" + k + ":" + i]) continue;
             var q = Q.ceppoXY(g, ri, k, i); if (q[0] < nw[0] || q[0] > se[0] || q[1] < nw[1] || q[1] > se[1]) continue;
@@ -249,22 +260,15 @@
     var xy = fromLL(f.lat, f.lon), plot = st.plots.find(function (p) { return Q.pip(xy, p.pts); });
     if (!plot) return { plot: null };
     if (!plot.vine) return { plot: plot.id };
-    var g = Q.vineGeo(plot), s = Q.vdot(xy, g.n), t = Q.vdot(xy, g.d), ri = Math.round((s - (g.smin + g.inter / 2)) / g.inter);
-    ri = Math.max(0, Math.min(g.rows.length - 1, ri));
-    return nearestOnRow(plot, g, ri, t);
-  }
-  function nearestOnRow(plot, g, ri, t) {
-    var r = g.rows[ri]; if (!r || !r.segs.length) return { plot: plot.id, ri: null };
-    var best = null;
-    r.segs.forEach(function (sg, k) { var i = Math.max(0, Math.min(sg.c - 1, Math.round((t - sg.t0 - g.rw / 2) / g.rw))), tt = sg.t0 + g.rw / 2 + i * g.rw, d = Math.abs(tt - t); if (!best || d < best.d) best = { k: k, i: i, d: d }; });
-    return { plot: plot.id, ri: ri, k: best.k, i: best.i };
+    var g = Q.vineGeo(plot), b = Q.nearestCeppo(g, xy);
+    return b ? { plot: plot.id, ri: b.ri, k: b.k, i: b.i } : { plot: plot.id, ri: null };
   }
   function moveSel(dRow, dCep) {
     var s = gps.sel; if (!s || s.ri == null) return; var p = Q.plotById(s.plot), g = Q.vineGeo(p);
     if (dRow) {
-      var t = g.rows[s.ri].segs[s.k].t0 + g.rw / 2 + s.i * g.rw, ri = s.ri + dRow;
+      var q = Q.ceppoXY(g, s.ri, s.k, s.i), ri = s.ri + dRow;
       while (g.rows[ri] && !g.rows[ri].segs.length) ri += dRow;
-      if (!g.rows[ri]) return; gps.sel = nearestOnRow(p, g, ri, t);
+      if (!g.rows[ri]) return; var b = Q.nearestCeppo(g, q, ri); gps.sel = { plot: p.id, ri: ri, k: b.k, i: b.i };
     }
     if (dCep) {
       var sg = g.rows[s.ri].segs[s.k], i = s.i + dCep;
@@ -288,7 +292,8 @@
     var pts = [];
     rec.pts.forEach(function (q) { var p = fromLL(q[0], q[1]), l = pts[pts.length - 1]; p = [Math.round(p[0] * 10) / 10, Math.round(p[1] * 10) / 10]; if (!l || Math.hypot(l[0] - p[0], l[1] - p[1]) >= 1) pts.push(p); });
     rec.on = false; rec.pts = [];
-    Q.ui.draw = { pts: pts, closed: true, name: "Nuova area " + (st.plots.length + 1), type: "vigna" };
+    var rf = Q.ui.recFor || {}; Q.ui.recFor = null;
+    Q.ui.draw = { pts: pts, closed: true, name: rf.name || "Nuova area " + (st.plots.length + 1), type: rf.type || "vigna", ter: rf.ter || "" };
     Q.save(); Q.toast("Perimetro registrato: " + Q.m2(Q.area(pts)) + ". Dai un nome e salva."); Q.render();
   }
 
@@ -312,8 +317,8 @@
       if (!p.vine || s.ri == null) h += '<span>Sei in <b>' + esc(p.name) + '</b>.</span>';
       else {
         var g = Q.vineGeo(p), key = s.ri + ":" + s.k + ":" + s.i, m = p.vine.marks[key], segs = g.rows[s.ri].segs.length;
-        h += '<span>Sei in <b>' + esc(p.name) + '</b>, <b>filare ' + (s.ri + 1) + '</b>, <b>ceppo ' + (s.i + 1) + '</b>' + (segs > 1 ? ' (tratto ' + (s.k + 1) + ')' : '') + '</span>';
-        h += '<span class="small muted">' + (gps.adjusted ? 'Ceppo scelto a mano. ' : 'Incertezza circa ±' + Math.ceil(f.acc / g.inter) + ' filari e ±' + Math.ceil(f.acc / g.rw) + ' ceppi: correggi con le frecce. ') + (m ? 'Ora: ' + (m === "f" ? 'fallanza' : m === "n" ? 'rimpiazzato' : 'sintomi') + '.' : '') + '</span>';
+        h += '<span>Sei in <b>' + esc(p.name) + '</b>, <b>filare ' + Q.rowNo(p, s.ri) + '</b>, <b>ceppo ' + (s.i + 1) + '</b>' + (segs > 1 ? ' (tratto ' + (s.k + 1) + ')' : '') + '</span>';
+        h += '<span class="small muted">' + (gps.adjusted ? 'Ceppo scelto a mano. ' : 'Incertezza circa ±' + Math.ceil(f.acc / Math.max(0.5, g.inter)) + ' filari e ±' + Math.ceil(f.acc / g.rw) + ' ceppi: correggi con le frecce. ') + (m ? 'Ora: ' + (m === "f" ? 'fallanza' : m === "n" ? 'rimpiazzato' : 'sintomi') + '.' : '') + '</span>';
         h += '<div class="row" style="align-items:flex-start;gap:14px"><div class="mp-arrows"><span></span><button data-mp="sel" data-r="-1" aria-label="Filare precedente">▲</button><span></span><button data-mp="sel" data-c="-1" aria-label="Ceppo precedente">◀</button><button data-mp="selGps" aria-label="Torna alla posizione GPS" style="font-size:13px">GPS</button><button data-mp="sel" data-c="1" aria-label="Ceppo successivo">▶</button><span></span><button data-mp="sel" data-r="1" aria-label="Filare successivo">▼</button><span></span></div>';
         h += '<div class="stack" style="gap:6px;flex:1;min-width:140px"><button class="btn danger" data-mp="mark" data-v="f">Segna fallanza</button><button class="btn" data-mp="mark" data-v="s">Segna sintomi</button>' + (m === "f" ? '<button class="btn primary" data-mp="mark" data-v="n">Rimpiazzata</button>' : '') + (m ? '<button class="btn sm" data-mp="mark" data-v="">Togli segno</button>' : '') + '</div></div>';
       }
