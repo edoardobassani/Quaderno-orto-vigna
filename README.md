@@ -118,6 +118,20 @@ Il piano gratuito (Spark) basta per un'azienda con pochi utenti.
 3. **Invita un collega** con la sua email e il ruolo.
 4. Il collega apre il link dell'app, crea l'account **con la stessa email**, la conferma e trova l'invito nella barra in alto.
 
+## Comandi vocali e note
+
+Il microfono in alto a destra, accanto ad **Aa**, apre il pannello vocale. Parli, l'app mostra cosa ha sentito e cosa farà, e salva solo quando tocchi **Conferma** (con **Correggi** sistemi la frase).
+
+- `fallanza filare 12 ceppo 40` (anche `sintomi`, `rimpiazzato`, `togli segno`; `fallanza qui` usa il ceppo più vicino col GPS acceso nella Mappa)
+- `campione Poggio 21 brix acidità 6,5 pH 3,3`
+- `trattamento fatto rame al Poggio`
+- `fase fioritura Impianto nuovo`
+- `nota grandine sul filare 20` (una frase non riconosciuta viene proposta come nota)
+
+La parcella è quella che nomini, altrimenti quella dove sei col GPS, altrimenti quella aperta. Le note si vedono in Oggi e nella scheda della parcella, con la posizione se il GPS era acceso, e si condividono con i colleghi.
+
+L'interpretazione usa regole fisse, senza AI né chiavi. La trascrizione la fa il riconoscimento vocale del browser: su Android con Chrome funziona e richiede la connessione; su iPhone si usa il microfono della tastiera nel campo di testo. Il microfono si nasconde dal menu **Aa**.
+
 ## Dimensione di testi e riquadri
 
 Il pulsante **Aa** in alto a destra, presente in tutte le sezioni, regola tutto insieme su 5 livelli con passi uguali: 80%, 90%, 100%, 110%, 120%. La scelta vale solo sul dispositivo. La mappa satellitare resta a dimensione reale, così le immagini restano nitide e i tocchi precisi.

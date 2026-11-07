@@ -4,7 +4,7 @@
 import { firebaseConfig } from "./config.js";
 
 const FB = "https://www.gstatic.com/firebasejs/10.12.2/";
-const COLS = ["parcelle", "piani", "campioni", "segni", "impostazioni", "articoli", "movimenti", "meteo", "prodotti"];
+const COLS = ["parcelle", "piani", "campioni", "segni", "impostazioni", "articoli", "movimenti", "meteo", "prodotti", "note"];
 const ROLES = { titolare: "Titolare", collaboratore: "Collaboratore", lettura: "Sola lettura" };
 const AKEY = "qo-azienda";
 const META = ["modificato", "modificatoDa"];
@@ -168,10 +168,11 @@ function decode() {
   const meteo = ms ? Object.assign({}, ms.cfg || {}, { months }) : (Object.keys(months).length ? { months } : null);
   const customProducts = {};
   Object.entries(remote.prodotti || {}).forEach(([id, d]) => { const o = Object.assign({}, d); META.forEach((k) => delete o[k]); customProducts[id] = o; });
-  return { plots, plans, samples, geo: g && g.geo ? g.geo : null, marksMeta, inv, meteo, customProducts };
+  const notes = Object.entries(remote.note || {}).map(([id, d]) => strip(id, d)).sort((a, b) => (a.at < b.at ? -1 : 1));
+  return { plots, plans, samples, geo: g && g.geo ? g.geo : null, marksMeta, inv, meteo, customProducts, notes };
 }
 function encode(S) {
-  const out = { parcelle: {}, piani: {}, campioni: {}, segni: {}, impostazioni: {}, articoli: {}, movimenti: {}, meteo: {}, prodotti: {} };
+  const out = { parcelle: {}, piani: {}, campioni: {}, segni: {}, impostazioni: {}, articoli: {}, movimenti: {}, meteo: {}, prodotti: {}, note: {} };
   (S.plots || []).forEach((p) => {
     const d = { name: p.name, type: p.type, pts: p.pts.map((q) => ({ x: q[0], y: q[1] })), plants: p.plants || [] };
     if (p.vine) {
@@ -182,6 +183,7 @@ function encode(S) {
   });
   (S.plans || []).forEach((pl) => { const d = Object.assign({}, pl); delete d.id; out.piani[pl.id] = clean(d); });
   (S.samples || []).forEach((s) => { const d = Object.assign({}, s); delete d.id; out.campioni[s.id] = clean(d); });
+  (S.notes || []).forEach((n) => { const d = Object.assign({}, n); delete d.id; out.note[n.id] = clean(d); });
   out.impostazioni.geo = { geo: S.geo ? clean(S.geo) : null };
   const inv = S.inv || { items: [], moves: [] };
   inv.items.forEach((it) => { const d = Object.assign({}, it); delete d.id; out.articoli[it.id] = clean(d); });
@@ -204,7 +206,7 @@ function applyAll() {
   if (uploadPending) {
     const d = uploadPending; uploadPending = null;
     baseline = encode({ plots: [], plans: [], samples: [], geo: null, inv: { items: [], moves: [] } });
-    QO().applyRemote({ plots: d.plots || [], plans: d.plans || [], samples: d.samples || [], geo: d.geo || null, marksMeta: {}, inv: d.inv || { items: [], moves: [] } });
+    QO().applyRemote({ plots: d.plots || [], plans: d.plans || [], samples: d.samples || [], geo: d.geo || null, marksMeta: {}, inv: d.inv || { items: [], moves: [] }, notes: d.notes || [] });
     doPush(QO().getState(), true);
     return;
   }
@@ -373,7 +375,7 @@ async function act(a, id) {
       case "create": {
         const nome = val("saAz"); if (!nome) { msg = "Dai un nome all'azienda."; break; }
         const up = document.getElementById("saUp").checked, st = QO().getState();
-        const copy = up ? clean({ plots: st.plots, plans: st.plans, samples: st.samples || [], geo: st.geo || null, inv: st.inv || { items: [], moves: [] } }) : null;
+        const copy = up ? clean({ plots: st.plots, plans: st.plans, samples: st.samples || [], geo: st.geo || null, inv: st.inv || { items: [], moves: [] }, notes: st.notes || [] }) : null;
         const ref = await F.addDoc(F.collection(db, "aziende"), { nome, membri: { [user.uid]: "titolare" }, membriInfo: { [user.uid]: { nome: myName(), email: user.email || "" } }, creata: F.serverTimestamp() });
         enter({ id: ref.id, data: { nome, membri: { [user.uid]: "titolare" }, membriInfo: { [user.uid]: { nome: myName(), email: user.email || "" } } } }, copy);
         msg = "Azienda creata" + (up ? ": sto caricando i dati del dispositivo." : "."); break;

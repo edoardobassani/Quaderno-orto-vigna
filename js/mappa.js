@@ -583,7 +583,14 @@
   window.QOMap = {
     ok: function () { return true; },
     mount: mount,
-    panelHtml: panelHtml
+    panelHtml: panelHtml,
+    /* posizione GPS attuale e ceppo più vicino (per i comandi vocali) */
+    currentPlot: function () {
+      if (!gps.on || !gps.fix) return null;
+      var o = { lat: gps.fix.lat, lon: gps.fix.lon, acc: gps.fix.acc, plot: null };
+      if (gps.sel) { o.plot = gps.sel.plot; o.ri = gps.sel.ri; o.k = gps.sel.k; o.i = gps.sel.i; }
+      return o;
+    }
   };
   Q.render();
 })();

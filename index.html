@@ -143,7 +143,7 @@ a{color:var(--serra)}
 
 </head>
 <body>
-<div class="syncbar"><div class="row" style="flex-wrap:nowrap;justify-content:space-between;gap:8px"><span id="syncbar" style="min-width:0;display:flex"></span><button type="button" id="zoomBtn" data-act="zoomOpen" aria-label="Dimensione di testi e riquadri" aria-haspopup="true" style="font-family:var(--f-display);font-weight:800;flex-shrink:0">Aa</button></div><div id="zoomPop" hidden></div></div>
+<div class="syncbar"><div class="row" style="flex-wrap:nowrap;justify-content:space-between;gap:8px"><span id="syncbar" style="min-width:0;display:flex"></span><span class="row" style="flex-wrap:nowrap;gap:6px;flex-shrink:0"><button type="button" id="micBtn" data-vo="mic" aria-label="Comando vocale o nota dettata" style="flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button><button type="button" id="zoomBtn" data-act="zoomOpen" aria-label="Dimensione di testi e riquadri" aria-haspopup="true" style="font-family:var(--f-display);font-weight:800;flex-shrink:0">Aa</button></span></div><div id="zoomPop" hidden></div></div>
 <div class="app" id="app"></div>
 <div class="sheet" id="acct" hidden></div>
 <nav class="nav" aria-label="Sezioni"><div id="nav"></div></nav>
@@ -680,6 +680,8 @@ function vOggi(){
   var vs=vignes();
   if(vs.length){h+='<h2 style="margin:16px 0 8px">Vigne</h2><div class="list">';vs.forEach(function(p){var sg=stageOf(p),last=lastFor(p,"peronospora"),cover=last?addDays(last.d,last.pl.every):null,rs=last&&window.QOMeteo?window.QOMeteo.rainSince(last.d):null;
     h+='<button class="item" data-act="homeGo" data-v="vigna:parcelle" data-id="'+p.id+'"><span class="swatch" style="background:var(--vigna-fill);border-color:var(--vigna)"></span><span class="grow"><b>'+esc(p.name)+'</b><br><span class="small muted">'+(sg?STN[sg.st][1]:'fase non registrata')+' · '+(cover&&cover>=t?'coperta fino a '+fmt(cover):last?'ultimo antiperonosporico '+fmt(last.d):'nessun antiperonosporico')+(rs!=null?' · '+num(rs)+' mm da allora':'')+'</span></span></button>'});h+='</div>'}
+  /* note dettate o scritte */
+  if(window.QOVoice)h+=window.QOVoice.notesHtml(null,5);
   /* attività dei colleghi */
   var rec=window.QOSync&&window.QOSync.recent?window.QOSync.recent():[];
   if(rec.length){h+='<h2 style="margin:16px 0 8px">Attività recenti</h2><div class="panel stack" style="gap:6px">'+rec.slice(0,5).map(function(a){return '<div class="small"><b>'+esc(a.da)+'</b> · '+esc(a.testo)+(a.quando&&a.quando.toDate?' <span class="muted">· '+a.quando.toDate().toLocaleString("it-IT",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})+'</span>':'')+'</div>'}).join("")+'</div>'}
@@ -789,6 +791,7 @@ function vParcelle(){
   h+='<div class="panel stack" style="margin-top:10px"><div class="row" style="justify-content:space-between"><h3>Fenologia</h3><span class="badge b-n">'+(sg?STN[sg.st][1]+' · BBCH '+STN[sg.st][2]:'non registrata')+'</span></div><div class="grid2"><label class="f">Fase<select id="vStage">'+STAGES.map(function(s){return '<option value="'+s[0]+'">'+s[1]+' (BBCH '+s[2]+')</option>'}).join("")+'</select></label><label class="f">Data<input id="vStageDate" type="date" value="'+iso(today())+'"></label></div><div><button class="btn sm" data-act="vPhenAdd">Registra fase</button></div>';
   if(V.phen.length)h+='<div class="small muted">'+V.phen.slice().reverse().slice(0,6).map(function(x){return STN[x.st][1]+' '+fmt(parse(x.date))}).join(" · ")+'</div>';
   h+='</div>';
+  if(window.QOVoice)h+=window.QOVoice.notesHtml(p.id,10);
   return h;
 }
 function drawVine(){
@@ -966,6 +969,7 @@ document.addEventListener("click",function(e){
     mode:function(){UI.mode=b.getAttribute("data-m")},
     homeAll:function(){UI.homeAll=!UI.homeAll},
     zoomOpen:function(){UI.zoomOpen=!UI.zoomOpen},
+    micToggle:function(){try{localStorage.setItem("qo-mic",micOn()?"0":"1")}catch(e){}},
     zoomSet:function(){var z=parseFloat(b.getAttribute("data-v"));try{localStorage.setItem(ZKEY,String(z))}catch(e){}applyZoom(z)},
     homeGo:function(){var v=(b.getAttribute("data-v")||"").split(":"),tab=v[0],sub=v[1];UI.tab=tab;UI.confirm=null;
       if(tab==="vigna"){UI.vtab=sub||"parcelle";UI.vedit=null;if(id)UI.vsel=id}
@@ -1020,7 +1024,7 @@ window.QO={
     if(!S.weather)S.weather={t:14,rh:70,wet:0,rain:0};if(!S.vw)S.vw={t:12,rain:0,shoot:0};if(!S.botte)S.botte={sel:{},prod:"rame",dose:3,unit:"kg",water:500,tank:1000,tit:20};if(!S.cropSel)S.cropSel="lattuga";if(!S.samples)S.samples=[];if(!S.inv)S.inv={items:[],moves:[]};
     UI.vsel=null;UI.vedit=null;UI.planForm=null;UI.draw=null;render()},
   /* dati arrivati dal cloud: sostituiscono parcelle, piani, campioni e segni */
-  applyRemote:function(d){if(d.customProducts)S.customProducts=d.customProducts;S.plots=d.plots;S.plans=d.plans;S.samples=d.samples;S.inv=d.inv||{items:[],moves:[]};if(d.meteo){var man=S.meteo&&S.meteo.manual;S.meteo=d.meteo;S.meteo.manual=!!man}S.geo=d.geo||S.geo||null;S.marksMeta=d.marksMeta||{};
+  applyRemote:function(d){if(d.customProducts)S.customProducts=d.customProducts;if(d.notes)S.notes=d.notes;S.plots=d.plots;S.plans=d.plans;S.samples=d.samples;S.inv=d.inv||{items:[],moves:[]};if(d.meteo){var man=S.meteo&&S.meteo.manual;S.meteo=d.meteo;S.meteo.manual=!!man}S.geo=d.geo||S.geo||null;S.marksMeta=d.marksMeta||{};
     if(S.sel&&!plotById(S.sel))S.sel=S.plots[0]&&S.plots[0].id;if(!S.sel&&S.plots[0])S.sel=S.plots[0].id;S.vineInit=true;saveLocal();safeRender()},
   render:function(){safeRender()},
   saveLocal:function(){saveLocal()},
@@ -1043,7 +1047,8 @@ function getZoom(){try{var z=parseFloat(localStorage.getItem(ZKEY));return ZLEVE
 function applyZoom(z){var r=document.documentElement;if(window.CSS&&CSS.supports&&CSS.supports("zoom","1")){r.style.zoom=z===1?"":String(z);r.style.setProperty("--mapz",String(Math.round(1/z*10000)/10000))}else{r.style.fontSize=(z*100)+"%"}
   setTimeout(function(){window.dispatchEvent(new Event("resize"))},50)}
 function zoomLevelsHtml(){var z=getZoom();return '<div class="zlv" role="group" aria-label="Dimensione">'+ZLEVELS.map(function(l,i){return '<button type="button" data-act="zoomSet" data-v="'+l[0]+'" aria-pressed="'+(l[0]===z)+'" aria-label="'+l[1]+'" style="font-size:'+(11+i*2.5)+'px">A</button>'}).join("")+'</div><div class="row small muted" style="justify-content:space-between;margin-top:4px"><span>'+ZLEVELS.filter(function(l){return l[0]===z})[0][1]+' · '+Math.round(z*100)+'%</span><span>solo su questo dispositivo</span></div>'}
-function renderZoomPop(){var p=$("#zoomPop");if(!p)return;p.hidden=!UI.zoomOpen;p.innerHTML=UI.zoomOpen?'<div class="panel stack" style="gap:6px;border:1px solid var(--line)"><b class="small">Dimensione di testi e riquadri</b>'+zoomLevelsHtml()+'</div>':''}
+function micOn(){try{return localStorage.getItem("qo-mic")!=="0"}catch(e){return true}}
+function renderZoomPop(){var mb=$("#micBtn");if(mb)mb.hidden=!micOn();var p=$("#zoomPop");if(!p)return;p.hidden=!UI.zoomOpen;p.innerHTML=UI.zoomOpen?'<div class="panel stack" style="gap:6px;border:1px solid var(--line)"><b class="small">Dimensione di testi e riquadri</b>'+zoomLevelsHtml()+'<div class="sep"></div><button type="button" class="btn sm" data-act="micToggle">'+(micOn()?'Nascondi':'Mostra')+' il microfono in alto</button></div>':''}
 applyZoom(getZoom());
 
 load();render();
@@ -1055,6 +1060,7 @@ load();render();
 <script src="js/inventario.js"></script>
 <script src="js/meteo.js"></script>
 <script src="js/prodotti.js"></script>
+<script src="js/voce.js"></script>
 <script>
 if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
 </script>
