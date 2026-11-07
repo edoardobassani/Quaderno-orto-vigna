@@ -1,6 +1,6 @@
 /* Service worker: rende l'app utilizzabile senza connessione.
    Ad ogni modifica dei file dell'app aumenta VERSION, così i telefoni scaricano la versione nuova. */
-const VERSION = "qo-v5";
+const VERSION = "qo-v6";
 const TILES = "qo-tiles-v1";
 const MAX_TILES = 4000;
 const SHELL = [
@@ -63,7 +63,8 @@ self.addEventListener("fetch", (e) => {
   // File dell'app: prima la rete (per avere gli aggiornamenti), poi la copia salvata.
   if (url.origin === self.location.origin) {
     e.respondWith(
-      fetch(req)
+      // "no-cache": chiede sempre a GitHub se il file è cambiato, invece di usare la copia del browser.
+      fetch(req, { cache: "no-cache" })
         .then((res) => {
           const copy = res.clone();
           caches.open(VERSION).then((c) => c.put(req, copy));
