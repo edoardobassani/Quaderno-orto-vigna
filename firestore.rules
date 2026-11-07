@@ -1,0 +1,76 @@
+rules_version = '2';
+
+// Regole di sicurezza del database.
+// Principio: ogni azienda vede e modifica solo i propri dati; chi non è membro non vede nulla.
+// Ruoli: titolare (tutto, compresi gli inviti), collaboratore (lavora sui dati), lettura (solo consultazione).
+// Da incollare in: console Firebase → Firestore Database → Regole → Pubblica.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function myEmail() { return request.auth.token.email.lower(); }
+    function roleIn(aid) {
+      return get(/databases/$(database)/documents/aziende/$(aid)).data.membri.get(request.auth.uid, '');
+    }
+    function isMember(aid) { return signedIn() && roleIn(aid) != ''; }
+    function canWrite(aid) { return signedIn() && roleIn(aid) in ['titolare', 'collaboratore']; }
+    function isOwner(aid) { return signedIn() && roleIn(aid) == 'titolare'; }
+
+    // Un utente invitato può aggiungere solo se stesso, con il ruolo scritto nell'invito,
+    // e solo con l'email confermata (così nessuno può fingersi un'altra persona).
+    function joining(aid) {
+      let invPath = /databases/$(database)/documents/inviti/$(aid + '_' + myEmail());
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && exists(invPath)
+        && get(invPath).data.aid == aid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['membri', 'membriInfo'])
+        && request.resource.data.membri.diff(resource.data.membri).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.membriInfo.diff(resource.data.membriInfo).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.membri[request.auth.uid] == get(invPath).data.ruolo;
+    }
+
+    match /aziende/{aid} {
+      allow read: if signedIn() && resource.data.membri.get(request.auth.uid, '') != '';
+
+      // Chi crea un'azienda ne è l'unico titolare.
+      allow create: if signedIn()
+        && request.resource.data.membri.keys().hasOnly([request.auth.uid])
+        && request.resource.data.membri[request.auth.uid] == 'titolare';
+
+      // Il titolare gestisce l'azienda ma non può togliersi il ruolo da solo.
+      allow update: if (signedIn()
+                        && resource.data.membri.get(request.auth.uid, '') == 'titolare'
+                        && request.resource.data.membri.get(request.auth.uid, '') == 'titolare')
+                    || joining(aid);
+
+      allow delete: if signedIn() && resource.data.membri.get(request.auth.uid, '') == 'titolare';
+
+      // Parcelle, trattamenti, campioni, segni sui ceppi, impostazioni.
+      match /{col}/{docId} {
+        allow read: if isMember(aid);
+        allow create, update, delete: if canWrite(aid) && col != 'attivita';
+      }
+
+      // Registro attività: si aggiunge, non si riscrive.
+      match /attivita/{docId} {
+        allow read: if isMember(aid);
+        allow create: if canWrite(aid) && request.resource.data.uid == request.auth.uid;
+        allow update, delete: if isOwner(aid);
+      }
+    }
+
+    // Inviti: il documento si chiama "<idAzienda>_<email>".
+    match /inviti/{invId} {
+      allow read: if signedIn() && (resource.data.email == myEmail() || isOwner(resource.data.aid));
+      allow create: if signedIn()
+        && isOwner(request.resource.data.aid)
+        && invId == request.resource.data.aid + '_' + request.resource.data.email
+        && request.resource.data.email == request.resource.data.email.lower()
+        && request.resource.data.ruolo in ['titolare', 'collaboratore', 'lettura'];
+      allow update: if false;
+      allow delete: if signedIn() && (resource.data.email == myEmail() || isOwner(resource.data.aid));
+    }
+  }
+}

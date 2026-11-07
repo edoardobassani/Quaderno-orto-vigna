@@ -1,0 +1,904 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quaderno dell'orto e della vigna</title>
+<meta name="description" content="Gestione di orto e vigna: parcelle, filari, trattamenti bio, registro e maturazione.">
+<meta name="theme-color" content="#2E6A3C">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Quaderno">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,500..800&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+html{padding-top:env(safe-area-inset-top,0px);color-scheme:light}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+.syncbar{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px 0}
+.syncbar button{display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:0 12px;border-radius:18px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 14px var(--f-body);cursor:pointer;max-width:100%}
+.syncbar button span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.syncdot{width:10px;height:10px;border-radius:5px;flex-shrink:0;background:var(--ink-2)}
+.syncdot.ok{background:var(--accent)}.syncdot.wait{background:var(--warn)}.syncdot.off{background:var(--bad)}
+.sheet{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet>div{background:var(--bg);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px calc(20px + env(safe-area-inset-bottom,0px))}
+</style>
+<style>
+/* Layout: app a colonna singola (max 560px), barra di navigazione fissa in basso, una vista per scheda */
+:root{
+  --bg:#ECEFE4; --surface:#FFFFFF; --surface-2:#F5F7F0; --line:#D5DACB;
+  --ink:#1A2119; --ink-2:#4E5A4F; --accent:#2E6A3C; --accent-ink:#FFFFFF;
+  --serra:#3B6F87; --serra-fill:#D6E7EE; --campo-fill:#C9DDB5; --tunnel-fill:#E2DCF0; --tunnel:#5B4F86; --vigna-fill:#ECD9E2; --vigna:#7B2D4F;
+  --soil:#8B6A47; --soil-2:#A88563; --warn:#A85F0A; --warn-bg:#FBEBD3; --bad:#B3261E; --bad-bg:#F9DEDC; --ok-bg:#DDEBD3;
+  --f-display:"Archivo",system-ui,sans-serif; --f-body:"Source Sans 3",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141A15; --surface:#1E2620; --surface-2:#252E27; --line:#36423A;
+  --ink:#E7ECE3; --ink-2:#A9B5AA; --accent:#7CC08B; --accent-ink:#0F1A12;
+  --serra:#8EC3DA; --serra-fill:#21404D; --campo-fill:#2C4527; --tunnel-fill:#352F4D; --tunnel:#B9AEE6; --vigna-fill:#45283A; --vigna:#E3A1C0;
+  --soil:#5E4630; --soil-2:#76593D; --warn:#F2B35C; --warn-bg:#3D2C12; --bad:#F2918A; --bad-bg:#45201D; --ok-bg:#24381F; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#141A15; --surface:#1E2620; --surface-2:#252E27; --line:#36423A;
+  --ink:#E7ECE3; --ink-2:#A9B5AA; --accent:#7CC08B; --accent-ink:#0F1A12;
+  --serra:#8EC3DA; --serra-fill:#21404D; --campo-fill:#2C4527; --tunnel-fill:#352F4D; --tunnel:#B9AEE6; --vigna-fill:#45283A; --vigna:#E3A1C0;
+  --soil:#5E4630; --soil-2:#76593D; --warn:#F2B35C; --warn-bg:#3D2C12; --bad:#F2918A; --bad-bg:#45201D; --ok-bg:#24381F; color-scheme:dark }
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45}
+*{box-sizing:border-box}
+.app{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 110px}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance}
+h1{font-size:28px;font-weight:800;font-stretch:112%;letter-spacing:-.01em}
+h2{font-size:19px;font-weight:700;font-stretch:105%}
+h3{font-size:16px;font-weight:700}
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding-block:6px 12px}
+.eyebrow{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);font-weight:600}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--ink-2)}
+.small{font-size:14px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.panel{background:var(--surface);border-radius:14px;padding:14px}
+.btn{min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 15px var(--f-body);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.sm{min-height:36px;padding:0 12px;font-size:14px;border-radius:10px}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.btn:focus-visible,.chip:focus-visible,.nav a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--serra);outline-offset:2px}
+.chip{min-height:36px;padding:0 12px;border-radius:18px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 14px var(--f-body);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.chip[aria-pressed="true"]{border:2px solid var(--ink)}
+.dot{width:12px;height:12px;border-radius:6px;display:inline-block;flex-shrink:0}
+.badge{font-size:12px;font-weight:700;border-radius:8px;padding:2px 8px;white-space:nowrap}
+.b-warn{background:var(--warn-bg);color:var(--warn)}
+.b-bad{background:var(--bad-bg);color:var(--bad)}
+.b-ok{background:var(--ok-bg);color:var(--accent)}
+.b-n{background:var(--surface-2);color:var(--ink-2)}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--ink-2);min-width:0}
+input,select{min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:0 10px;font:16px var(--f-body);width:100%}
+input[type=checkbox]{width:22px;min-height:22px;height:22px;accent-color:var(--accent)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.mapwrap{position:relative;background:var(--surface-2);border-radius:16px;overflow:hidden;touch-action:none;border:1px solid var(--line)}
+.mapwrap svg{display:block;width:100%;height:auto;user-select:none;-webkit-user-select:none}
+.zoom{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px}
+.zoom button{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:700 20px var(--f-body);cursor:pointer}
+.hint{position:absolute;left:8px;bottom:8px;right:56px;font-size:13px;background:var(--surface);color:var(--ink);border-radius:10px;padding:6px 10px;border:1px solid var(--line)}
+.list{display:flex;flex-direction:column;gap:8px}
+.item{background:var(--surface);border-radius:14px;padding:12px 14px;display:flex;gap:12px;align-items:center;border:1px solid transparent;cursor:pointer;color:var(--ink);text-align:left;font:inherit;width:100%}
+.item[aria-current="true"]{border-color:var(--ink)}
+.item .grow{flex:1;min-width:0}
+.swatch{width:36px;height:36px;border-radius:9px;flex-shrink:0;border:2px solid}
+.nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px));padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));padding-top:6px;z-index:20}
+.nav div{display:flex;max-width:560px;width:100%;justify-content:space-around}
+.seg{display:flex;gap:4px;background:var(--surface-2);padding:4px;border-radius:12px;overflow-x:auto;margin-bottom:12px;border:1px solid var(--line)}
+.seg button{flex:1;min-height:40px;border:none;background:transparent;color:var(--ink-2);font:600 14px var(--f-body);border-radius:9px;white-space:nowrap;padding:0 10px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.tablebox{overflow-x:auto}
+table.reg{border-collapse:collapse;width:100%;font-size:14px}
+table.reg th,table.reg td{padding:6px 8px;text-align:left;white-space:nowrap;border-top:1px solid var(--line)}
+table.reg th{border-top:0;color:var(--ink-2);font-weight:600;font-size:13px}
+.kv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.kv div{display:flex;flex-direction:column;gap:1px}
+.kv span{font-size:13px;color:var(--ink-2)}
+.kv b{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:15px}
+.filebtn{position:relative;overflow:hidden}
+.filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer;min-height:0}
+.nav a{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;font-weight:600;color:var(--ink-2);text-decoration:none;min-width:58px;padding:4px 0;border-radius:10px}
+.nav a[aria-current="page"]{color:var(--accent)}
+.nav svg{width:24px;height:24px}
+.strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.day{border-radius:10px;background:var(--surface);padding:6px 0;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:12px}
+.day b{font-family:var(--f-display);font-size:17px}
+.day.today{background:var(--ink);color:var(--surface)}
+.day i{width:7px;height:7px;border-radius:4px;background:transparent}
+.risk{border-left:0;display:flex;gap:10px;align-items:flex-start}
+.bar{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.bar span{display:block;height:100%;background:var(--accent)}
+.bar span.w{background:var(--warn)} .bar span.x{background:var(--bad)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:12px;font-weight:600;z-index:30;max-width:calc(100% - 32px);text-align:center}
+details summary{cursor:pointer;font-weight:600;min-height:32px;display:flex;align-items:center}
+a{color:var(--serra)}
+.src{font-size:13px}
+.sep{height:1px;background:var(--line);margin:4px 0}
+@media (prefers-reduced-motion:no-preference){.item,.btn,.chip{transition:background .15s,border-color .15s}}
+</style>
+
+</head>
+<body>
+<div class="syncbar" id="syncbar"></div>
+<div class="app" id="app"></div>
+<div class="sheet" id="acct" hidden></div>
+<nav class="nav" aria-label="Sezioni"><div id="nav"></div></nav>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+"use strict";
+/* ---------- utilità ---------- */
+var $ = function(s){return document.querySelector(s)};
+function uid(){return Math.random().toString(36).slice(2,9)}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function today(){var d=new Date();d.setHours(12,0,0,0);return d}
+function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function parse(s){var p=s.split("-");return new Date(+p[0],+p[1]-1,+p[2],12)}
+function addDays(d,n){var x=new Date(d);x.setDate(x.getDate()+n);return x}
+function diffDays(a,b){return Math.round((a-b)/864e5)}
+var GG=["dom","lun","mar","mer","gio","ven","sab"],MM=["gen","feb","mar","apr","mag","giu","lug","ago","set","ott","nov","dic"];
+function fmt(d){return GG[d.getDay()]+" "+d.getDate()+" "+MM[d.getMonth()]}
+function fmtRel(d){var n=diffDays(d,today());if(n===0)return "oggi";if(n===1)return "domani";if(n===-1)return "ieri";return fmt(d)}
+function area(p){var a=0;for(var i=0;i<p.length;i++){var j=(i+1)%p.length;a+=p[i][0]*p[j][1]-p[j][0]*p[i][1]}return Math.abs(a)/2}
+function pip(pt,p){var x=pt[0],y=pt[1],ins=false;for(var i=0,j=p.length-1;i<p.length;j=i++){var xi=p[i][0],yi=p[i][1],xj=p[j][0],yj=p[j][1];if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))ins=!ins}return ins}
+function dSeg(p,a,b){var dx=b[0]-a[0],dy=b[1]-a[1],l=dx*dx+dy*dy,t=l?((p[0]-a[0])*dx+(p[1]-a[1])*dy)/l:0;t=Math.max(0,Math.min(1,t));var x=a[0]+t*dx-p[0],y=a[1]+t*dy-p[1];return Math.sqrt(x*x+y*y)}
+function dEdge(p,poly){var m=1e9;for(var i=0;i<poly.length;i++)m=Math.min(m,dSeg(p,poly[i],poly[(i+1)%poly.length]));return m}
+function bbox(pts){var b={x0:1e9,y0:1e9,x1:-1e9,y1:-1e9};pts.forEach(function(p){b.x0=Math.min(b.x0,p[0]);b.y0=Math.min(b.y0,p[1]);b.x1=Math.max(b.x1,p[0]);b.y1=Math.max(b.y1,p[1])});return b}
+function m2(n){return Math.round(n).toLocaleString("it-IT")+" m²"}
+function num(n,d){return n.toLocaleString("it-IT",{maximumFractionDigits:d==null?1:d})}
+function toast(t){var el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(function(){el.hidden=true},2600)}
+
+/* ---------- colture (valori indicativi, cm) ---------- */
+var CROPS={
+  pomodoro:{n:"Pomodoro",row:50,btw:100,fam:"solanacee",days:110,c:"#D2452F"},
+  melanzana:{n:"Melanzana",row:50,btw:80,fam:"solanacee",days:120,c:"#6A3D8F"},
+  peperone:{n:"Peperone",row:40,btw:70,fam:"solanacee",days:120,c:"#E0882B"},
+  patata:{n:"Patata",row:30,btw:70,fam:"solanacee",days:110,c:"#B89252"},
+  zucchino:{n:"Zucchino",row:80,btw:100,fam:"cucurbitacee",days:60,c:"#3F8C3A"},
+  cetriolo:{n:"Cetriolo",row:50,btw:100,fam:"cucurbitacee",days:65,c:"#5DA34F"},
+  melone:{n:"Melone",row:80,btw:150,fam:"cucurbitacee",days:95,c:"#E2B24A"},
+  lattuga:{n:"Lattuga",row:25,btw:30,fam:"asteracee",days:55,c:"#8BC34A"},
+  rucola:{n:"Rucola",row:5,btw:20,fam:"brassicacee",days:35,c:"#6E9F3E"},
+  cavolo:{n:"Cavolo",row:50,btw:60,fam:"brassicacee",days:120,c:"#4B7F86"},
+  finocchio:{n:"Finocchio",row:25,btw:40,fam:"apiacee",days:90,c:"#C7D97A"},
+  carota:{n:"Carota",row:5,btw:25,fam:"apiacee",days:90,c:"#E37A23"},
+  porro:{n:"Porro",row:15,btw:35,fam:"amarillidacee",days:140,c:"#7FA88A"},
+  cipolla:{n:"Cipolla",row:10,btw:25,fam:"amarillidacee",days:120,c:"#C48BB0"},
+  aglio:{n:"Aglio",row:10,btw:25,fam:"amarillidacee",days:220,c:"#D9CFC0"},
+  spinacio:{n:"Spinacio",row:10,btw:25,fam:"amarantacee",days:50,c:"#2F7A4E"},
+  fagiolino:{n:"Fagiolino nano",row:10,btw:50,fam:"fabacee",days:65,c:"#A3B83A"},
+  basilico:{n:"Basilico",row:25,btw:30,fam:"lamiacee",days:60,c:"#5AAE6B"},
+  fragola:{n:"Fragola",row:30,btw:40,fam:"rosacee",days:120,c:"#E0425F"},
+  vite:{n:"Vite",row:90,btw:250,fam:"vitacee",days:0,c:"#7B2D4F",vine:true}
+};
+/* malattie e famiglie sensibili (semplificato) */
+var DIS={
+  peronospora:{n:"Peronospora",fam:["solanacee","cucurbitacee","asteracee","amarillidacee","brassicacee","amarantacee","vitacee"]},
+  oidio:{n:"Oidio (mal bianco)",fam:["cucurbitacee","solanacee","fabacee","rosacee","apiacee","vitacee"]},
+  botrite:{n:"Botrite (muffa grigia)",fam:["asteracee","solanacee","rosacee","cucurbitacee"],serraOnly:true}
+};
+
+/* ---------- libreria prodotti bio / biodinamici ---------- */
+var SRC={
+  adama:{t:"Etichetta ministeriale Quantum R-OK (ossicloruro di rame)",u:"https://www.adama.com/italia/sites/adama_italy/files/downloads/Quantum%20R-OK%20-%20Etichetta%20Ministeriale%20CLP.pdf"},
+  zolfo:{t:"Regione Emilia-Romagna, manuale prodotti a basso impatto: zolfo",u:"https://agricoltura.regione.emilia-romagna.it/fitosanitario/difesa-sostenibile/uso-sostenibile/prodotti-fitosanitari/Manuale-basso-impatto/documenti/9-2-2-zolfo-14_03_24.pdf/@@download/file"},
+  bicarb:{t:"Regione Emilia-Romagna, manuale prodotti a basso impatto: bicarbonato di potassio",u:"https://agricoltura.regione.emilia-romagna.it/fitosanitario/difesa-sostenibile/uso-sostenibile/prodotti-fitosanitari/Manuale-basso-impatto/documenti/9-2-6-bicarbonato-di-potassio14_03_24.pdf/@@download/file"},
+  bt:{t:"Scheda Biobit DF (Bacillus thuringiensis kurstaki)",u:"https://agronotizie.imagelinenetwork.com/materiali/Varie/File/Leaflet-Biobit-DF.pdf"},
+  neem:{t:"Regione Emilia-Romagna, manuale prodotti a basso impatto: azadiractina",u:"https://agricoltura.regione.emilia-romagna.it/fitosanitario/difesa-sostenibile/uso-sostenibile/prodotti-fitosanitari/Manuale-basso-impatto/documenti/9-1-1-azadiractina-14_03_24.pdf/@@download/file"},
+  piretro:{t:"Regione Emilia-Romagna, manuale prodotti a basso impatto: piretrine",u:"https://agricoltura.regione.emilia-romagna.it/fitosanitario/difesa-sostenibile/uso-sostenibile/prodotti-fitosanitari/Manuale-basso-impatto/documenti/9-1-2-piretrine-14_03_24.pdf/@@download/file"},
+  equi:{t:"Reg. di esecuzione (UE) 462/2014, Equisetum arvense sostanza di base",u:"https://www.legislation.gov.uk/eur/2014/462"}
+};
+var PRODUCTS={
+  rame:{n:"Rame (ossicloruro)",kind:"Fungicida, ammesso in bio",tgt:["peronospora"],every:[7,14],car:{vite:28,pomodoro:7,melanzana:7,cetriolo:3,zucchino:7,melone:7,patata:14,lattuga:7,rucola:7},maxApp:{vite:4,pomodoro:3,melanzana:3,cetriolo:2,zucchino:2,melone:2,patata:4,lattuga:2,rucola:2},maxDose:3.5,rainWash:true,copper:true,
+    notes:["Limite rame: 28 kg/ha in 7 anni, in media 4 kg/ha all'anno.","Fascia non trattata di 10 m dai corsi d'acqua.","Non miscelare con bicarbonato di potassio."],src:["adama"],level:"Etichetta"},
+  zolfo:{n:"Zolfo bagnabile",kind:"Fungicida, ammesso in bio",tgt:["oidio"],every:[7,10],car:5,rainWash:true,
+    notes:["Non agisce sotto 10 °C; sopra 30-32 °C può bruciare le foglie: evita le ore calde, soprattutto sulle cucurbitacee.","Non usare con oli: servono 15-21 giorni di distanza.","Evita il trattamento subito dopo la pioggia."],src:["zolfo"],level:"Manuale regionale",everyNote:"L'intervallo non è fisso in etichetta: 7-10 gg è la pratica comune."},
+  bicarb:{n:"Bicarbonato di potassio",kind:"Fungicida, ammesso in bio",tgt:["oidio","botrite"],every:[7,10],car:1,rainWash:true,
+    notes:["Non superare lo 0,5% di concentrazione.","Non acidificare la soluzione e non miscelare con rame.","Fascia di 5 m dai corsi d'acqua."],src:["bicarb"],level:"Manuale regionale",everyNote:"Intervallo non indicato in etichetta: 7-10 gg è la pratica comune."},
+  equiseto:{n:"Equiseto (decotto o preparato 508)",kind:"Sostanza di base / biodinamico",tgt:["peronospora","oidio"],every:[7,10],car:0,rainWash:true,
+    notes:["Solo preventivo: rinforza la pianta, non cura un'infezione in corso.","Nella pratica biodinamica si usa come preparato 508."],src:["equi"],level:"Pratica comune",everyNote:"Intervallo dalla pratica di campo, non da etichetta."},
+  bt:{n:"Bacillus thuringiensis",kind:"Insetticida biologico",tgt:["lepidotteri"],every:[5,10],car:3,rainWash:true,maxAll:2,
+    notes:["Contro larve di cavolaia, nottue, tignole, piralide.","Tratta nel tardo pomeriggio: i raggi UV lo degradano.","Ripeti se piove forte entro 6 ore dal trattamento."],src:["bt"],level:"Scheda tecnica"},
+  neem:{n:"Azadiractina (neem)",kind:"Insetticida, ammesso in bio",tgt:["afidi","aleurodidi","tripidi","minatori","dorifora"],every:[7,14],car:3,
+    notes:["Non abbatte subito: usalo appena compaiono i parassiti.","Con mosca bianca e tripidi ripeti 2-3 volte a 1-2 settimane.","Tratta nelle ore fresche, acqua a pH 6-7."],src:["neem"],level:"Manuale regionale"},
+  piretro:{n:"Piretrine naturali",kind:"Insetticida, ammesso in bio",tgt:["afidi","tripidi","aleurodidi","cimici"],every:[7,10],car:2,
+    notes:["Colpisce anche gli insetti utili: evita 3-4 trattamenti di fila.","Tratta di sera o con poca luce.","Carenza indicativa di 2 giorni: verifica l'etichetta del tuo prodotto."],src:["piretro"],level:"Manuale regionale"},
+  ortica:{n:"Macerato d'ortica",kind:"Corroborante",tgt:["afidi"],every:[7,10],car:0,
+    notes:["Azione repellente e nutritiva, non è un insetticida.","Diluito al 5-10% sulle foglie."],src:[],level:"Pratica comune"},
+  bd500:{n:"Preparato 500 (cornoletame)",kind:"Biodinamico, sul terreno",tgt:[],every:[90,180],car:0,
+    notes:["Si distribuisce sul terreno nel pomeriggio, in autunno e in primavera.","Uno o due passaggi a stagione."],src:[],level:"Pratica biodinamica"},
+  bd501:{n:"Preparato 501 (cornosilice)",kind:"Biodinamico, sulle foglie",tgt:[],every:[14,21],car:0,
+    notes:["Si nebulizza sulle foglie al mattino presto.","Pochi passaggi per ciclo colturale."],src:[],level:"Pratica biodinamica"}
+};
+
+/* ---------- stato ---------- */
+var KEY="quaderno-orto-v1",S;
+function rect(x,y,w,h){return [[x,y],[x+w,y],[x+w,y+h],[x,y+h]]}
+function sample(){
+  var t=today();
+  var s={plots:[
+    {id:"s1",name:"Serra 1",type:"serra",pts:rect(6,6,32,8),plants:[]},
+    {id:"s2",name:"Serra 2",type:"serra",pts:rect(6,18,32,8),plants:[]},
+    {id:"cn",name:"Campo Nord",type:"campo",pts:[[44,4],[96,2],[100,52],[46,58]],plants:[]},
+    {id:"ce",name:"Campo Est",type:"campo",pts:[[104,6],[136,10],[132,58],[106,54]],plants:[]},
+    {id:"oc",name:"Orto di casa",type:"tunnel",pts:rect(10,34,20,14),plants:[]}
+  ],plans:[],weather:{t:14,rh:92,wet:7,rain:22},sel:"s1",cropSel:"lattuga"};
+  fill(s.plots[0],"lattuga",rect(6.2,6.2,9,7.6));
+  fill(s.plots[0],"spinacio",rect(16,6.2,4,7.6));
+  fill(s.plots[1],"finocchio",rect(6.2,18.2,12,7.6));
+  fill(s.plots[2],"cavolo",rect(48,8,20,14));
+  fill(s.plots[2],"porro",rect(48,24,14,8));
+  var p0=s.plots[0].plants;p0.push({id:uid(),c:"lattuga",x:p0[5].x+0.12,y:p0[5].y+0.02});
+  s.plans.push({id:uid(),prod:"rame",plot:"s1",start:iso(addDays(t,-8)),every:7,count:2,rain:false,cu:0.6,done:[iso(addDays(t,-8))]});
+  s.plans.push({id:uid(),prod:"bt",plot:"cn",start:iso(addDays(t,-4)),every:7,count:2,rain:true,done:[iso(addDays(t,-4))]});
+  s.plans.push({id:uid(),prod:"equiseto",plot:"s2",start:iso(addDays(t,-6)),every:10,count:6,rain:false,done:[iso(addDays(t,-6))]});
+  s.plans.push({id:uid(),prod:"rame",plot:"cn",start:iso(addDays(t,3)),every:7,count:3,rain:true,cu:0.6,done:[]});
+  addVineSample(s);
+  return s;
+}
+function addVineSample(s){
+  var t=today(),y=t.getMonth()>=8?t.getFullYear():t.getFullYear()-1;
+  var v1={id:"v1",name:"Vigna del Poggio",type:"vigna",pts:[[10,66],[92,63],[96,118],[14,122]],plants:[],vine:vineDefaults({varieta:"Sangiovese",port:"1103 Paulsen",anno:2009,forma:"Cordone speronato",inter:2.5,row:0.9,ori:0})};
+  var v2={id:"v2",name:"Impianto nuovo",type:"vigna",pts:rect(102,66,46,52),plants:[],vine:vineDefaults({varieta:"Trebbiano",port:"SO4",anno:t.getFullYear(),forma:"Guyot",inter:2.4,row:1,ori:12})};
+  v1.vine.marks={"3:0:10":"f","3:0:11":"f","8:0:40":"f","14:0:5":"f","20:0:18":"f","11:0:22":"s","11:0:23":"s"};
+  v1.vine.phen=[{st:"germ",date:iso(addDays(t,-215))},{st:"fior",date:iso(addDays(t,-160))},{st:"invai",date:iso(addDays(t,-95))},{st:"matur",date:iso(addDays(t,-55))},{st:"cadu",date:iso(addDays(t,-8))}];
+  s.plots.push(v1,v2);
+  s.plans.push({id:uid(),prod:"rame",plot:"v1",start:iso(addDays(t,-185)),every:10,count:4,rain:true,cu:0.8,done:[-185,-174,-162,-150].map(function(n){return iso(addDays(t,n))})});
+  s.plans.push({id:uid(),prod:"zolfo",plot:"v1",start:iso(addDays(t,-170)),every:8,count:3,rain:true,done:[-170,-161,-152].map(function(n){return iso(addDays(t,n))})});
+  s.samples=[["08-20",16.4,11.6,2.98],["08-27",18.1,9.9,3.06],["09-03",19.9,8.4,3.14],["09-10",21.3,7.3,3.22],["09-17",22.5,6.5,3.30]].map(function(r){return {id:uid(),plot:"v1",date:y+"-"+r[0],brix:r[1],ac:r[2],ph:r[3]}});
+  s.vw={t:12,rain:14,shoot:0};
+  s.botte={sel:{v1:true,v2:true},prod:"rame",dose:3,unit:"kg",water:500,tank:1000,tit:20};
+  s.vineInit=true;
+}
+function load(){try{var r=localStorage.getItem(KEY);if(r){S=JSON.parse(r);if(!S.vineInit){addVineSample(S);save()}return}}catch(e){}S=sample()}
+function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function save(){saveLocal();if(window.QOSync&&window.QOSync.active)window.QOSync.push(S)}
+function plotById(id){return S.plots.find(function(p){return p.id===id})}
+function cropsIn(p){if(p.vine)return {vite:vineGeo(p).ceppi};var o={};p.plants.forEach(function(pl){o[pl.c]=(o[pl.c]||0)+1});return o}
+
+/* ---------- piante: distanze e riempimento ---------- */
+function spacing(c){return CROPS[c].row/100}
+function hashOf(plants){var h={};plants.forEach(function(p,i){var k=Math.floor(p.x)+":"+Math.floor(p.y);(h[k]=h[k]||[]).push(i)});return h}
+function near(h,plants,x,y,r,fn){var cx=Math.floor(x),cy=Math.floor(y),R=Math.ceil(r);for(var i=cx-R;i<=cx+R;i++)for(var j=cy-R;j<=cy+R;j++){var b=h[i+":"+j];if(b)b.forEach(function(k){fn(plants[k],k)})}}
+function needed(a,b){return (spacing(a)+spacing(b))/2}
+function conflicts(plot){
+  var P=plot.plants,h=hashOf(P),bad=new Set(),minD={};
+  P.forEach(function(p,i){near(h,P,p.x,p.y,1,function(q,k){if(k<=i)return;var d=Math.hypot(p.x-q.x,p.y-q.y),n=needed(p.c,q.c)*0.9;if(d<n){bad.add(i);bad.add(k);minD[i]=d;minD[k]=d}})});
+  return {bad:bad,minD:minD};
+}
+function fill(plot,c,limit){
+  var cr=CROPS[c],r=cr.row/100,b2=cr.btw/100,poly=plot.pts,lim=limit||poly,bb=bbox(lim),added=0;
+  var h=hashOf(plot.plants);
+  for(var y=bb.y0+b2/2;y<=bb.y1-b2/2+1e-6;y+=b2){
+    for(var x=bb.x0+r/2;x<=bb.x1-r/2+1e-6;x+=r){
+      var pt=[x,y];if(!pip(pt,poly)||!pip(pt,lim)||dEdge(pt,poly)<r/2*0.9)continue;
+      var ok=true;near(h,plot.plants,x,y,1,function(q){if(Math.hypot(q.x-x,q.y-y)<needed(c,q.c)*0.95)ok=false});
+      if(!ok)continue;
+      if(plot.plants.length>=8000)return added;
+      var np={id:uid(),c:c,x:Math.round(x*100)/100,y:Math.round(y*100)/100};plot.plants.push(np);
+      var k=Math.floor(np.x)+":"+Math.floor(np.y);(h[k]=h[k]||[]).push(plot.plants.length-1);added++;
+    }
+  }
+  return added;
+}
+
+/* ---------- trattamenti ---------- */
+function carenzaFor(prod,plot){
+  var P=PRODUCTS[prod],cs=Object.keys(cropsIn(plot));
+  if(typeof P.car==="number")return {days:P.car,offLabel:[]};
+  var max=0,off=[];cs.forEach(function(c){if(P.car[c]==null)off.push(CROPS[c].n);else max=Math.max(max,P.car[c])});
+  return {days:max,offLabel:off};
+}
+function nextDue(pl){
+  if(pl.done.length>=pl.count)return null;
+  if(!pl.done.length)return parse(pl.start);
+  return addDays(parse(pl.done[pl.done.length-1]),pl.every);
+}
+function harvestBlock(plot){
+  var t=today(),out=null;
+  S.plans.forEach(function(pl){if(pl.plot!==plot.id||!pl.done.length)return;var last=parse(pl.done[pl.done.length-1]),c=carenzaFor(pl.prod,plot).days,end=addDays(last,c);if(end>t&&(!out||end>out.end))out={end:end,prod:pl.prod}});
+  return out;
+}
+function copperYear(plot){
+  var y=today().getFullYear(),kg=0;
+  S.plans.forEach(function(pl){if(pl.plot===plot.id&&PRODUCTS[pl.prod].copper)pl.done.forEach(function(d){if(parse(d).getFullYear()===y)kg+=(+pl.cu||0)})});
+  return kg;
+}
+function lastFor(plot,dis){
+  var best=null;
+  S.plans.forEach(function(pl){if(pl.plot!==plot.id||PRODUCTS[pl.prod].tgt.indexOf(dis)<0)return;pl.done.forEach(function(d){var x=parse(d);if(!best||x>best.d)best={d:x,pl:pl}})});
+  return best;
+}
+function risks(){
+  var w=S.weather,out=[];
+  S.plots.forEach(function(plot){
+    var fams={};Object.keys(cropsIn(plot)).forEach(function(c){fams[CROPS[c].fam]=1});
+    if(!Object.keys(fams).length)return;
+    var open=plot.type==="campo"||plot.type==="vigna";
+    Object.keys(DIS).forEach(function(k){
+      var D=DIS[k];if(D.serraOnly&&open)return;
+      if(!D.fam.some(function(f){return fams[f]}))return;
+      var lvl=0,why="";
+      if(k==="peronospora"){
+        if(w.wet>=6&&w.t>=10&&w.t<=25){lvl=2;why=w.wet+" h di foglia bagnata a "+w.t+" °C"}
+        else if(w.wet>=3&&w.t>=8&&w.t<=27){lvl=1;why=w.wet+" h di foglia bagnata"}
+      }else if(k==="oidio"){
+        if(w.t>=20&&w.t<=30&&w.rh>=70&&w.wet<2){lvl=2;why="caldo umido con foglie asciutte"}
+        else if(w.t>=16&&w.t<=32&&w.rh>=55&&w.wet<3){lvl=1;why="temperature favorevoli"}
+      }else if(k==="botrite"){
+        if(w.rh>=90&&w.t>=12&&w.t<=24){lvl=2;why="umidità "+w.rh+"% in ambiente chiuso"}
+        else if(w.rh>=80&&w.t>=10){lvl=1;why="umidità alta"}
+      }
+      if(!lvl)return;
+      var last=lastFor(plot,k),prot=null,washed=false;
+      if(last){var P=PRODUCTS[last.pl.prod],end=addDays(last.d,last.pl.every);
+        washed=open&&P.rainWash&&w.rain>=20&&diffDays(today(),last.d)>=2;
+        if(end>=today()&&!washed)prot={until:end,prod:last.pl.prod}}
+      var sug=Object.keys(PRODUCTS).filter(function(p){return PRODUCTS[p].tgt.indexOf(k)>=0});
+      out.push({plot:plot,dis:k,lvl:lvl,why:why,prot:prot,washed:washed,sug:sug});
+    });
+  });
+  return out.sort(function(a,b){return ((b.prot?0:1)-(a.prot?0:1))*10+(b.lvl-a.lvl)});
+}
+
+/* ---------- vista mappa: zoom e trascinamento condivisi ---------- */
+var VIEWS={};
+function fitView(key,b,margin){VIEWS[key]={x:b.x0-margin,y:b.y0-margin,w:(b.x1-b.x0)+margin*2,h:(b.y1-b.y0)+margin*2,aspect:0.68}}
+function vbOf(key){var v=VIEWS[key],a=v.aspect||0.68,w=Math.max(v.w,v.h/a),h=w*a,cx=v.x+v.w/2,cy=v.y+v.h/2;return {x:cx-w/2,y:cy-h/2,w:w,h:h}}
+function zoom(key,f){var v=vbOf(key),cx=v.x+v.w/2,cy=v.y+v.h/2;VIEWS[key]={x:cx-v.w*f/2,y:cy-v.h*f/2,w:v.w*f,h:v.h*f,aspect:v.h/v.w}}
+function svgPt(svg,e){var p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;var m=svg.getScreenCTM();if(!m)return [0,0];var r=p.matrixTransform(m.inverse());return [r.x,r.y]}
+function bindPan(svg,key,onTap){
+  var st=null;
+  svg.addEventListener("pointerdown",function(e){st={x:e.clientX,y:e.clientY,v:vbOf(key),moved:false,t:e.target};try{svg.setPointerCapture(e.pointerId)}catch(_){}});
+  svg.addEventListener("pointermove",function(e){if(!st)return;var dx=e.clientX-st.x,dy=e.clientY-st.y;if(!st.moved&&Math.hypot(dx,dy)<7)return;st.moved=true;var k=st.v.w/svg.clientWidth;VIEWS[key]={x:st.v.x-dx*k,y:st.v.y-dy*k,w:st.v.w,h:st.v.h,aspect:st.v.h/st.v.w};var v=VIEWS[key];svg.setAttribute("viewBox",v.x+" "+v.y+" "+v.w+" "+v.h)});
+  svg.addEventListener("pointerup",function(e){if(st&&!st.moved)onTap(svgPt(svg,e),{target:st.t});st=null});
+  svg.addEventListener("pointercancel",function(){st=null});
+}
+
+/* ---------- stato UI ---------- */
+var UI={tab:"mappa",draw:null,form:null,mode:"pianta",confirm:null,planForm:null};
+function setTab(t){UI.tab=t;UI.confirm=null;render();window.scrollTo(0,0)}
+
+/* ---------- render ---------- */
+var ICON={
+  mappa:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2Z"/><path d="M9 4v14M15 6v14"/></svg>',
+  impianto:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="2"/><circle cx="15.5" cy="8.5" r="2"/><circle cx="8.5" cy="15.5" r="2"/><circle cx="15.5" cy="15.5" r="2"/></svg>',
+  trattamenti:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3h4v4l3 3v10H7V10l3-3Z"/><path d="M7 14h10"/></svg>',
+  libreria:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3Z"/><path d="M9 9h6M9 13h6"/></svg>'
+};
+ICON.vigna='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="10" r="2.2"/><circle cx="14" cy="10" r="2.2"/><circle cx="11.5" cy="14" r="2.2"/><circle cx="11.5" cy="18.5" r="2.2"/><path d="M12 7c0-2 1.5-3.5 4-4M12 7c-1.5-1-3.5-1.2-5-.5"/></svg>';
+var TABS=[["mappa","Mappa"],["impianto","Orto"],["vigna","Vigna"],["trattamenti","Trattam."],["libreria","Libreria"]];
+function renderNav(){
+  var due=S.plans.filter(function(p){var d=nextDue(p);return d&&d<=today()}).length;
+  $("#nav").innerHTML=TABS.map(function(t){return '<a href="#" data-tab="'+t[0]+'"'+(UI.tab===t[0]?' aria-current="page"':'')+'>'+ICON[t[0]]+t[1]+(t[0]==="trattamenti"&&due?' <span class="badge b-warn">'+due+'</span>':'')+'</a>'}).join("");
+}
+function render(){renderNav();var a=$("#app");a.innerHTML=({mappa:vMappa,impianto:vImpianto,vigna:vVigna,trattamenti:vTratt,libreria:vLib})[UI.tab]();afterRender()}
+
+var FILL={serra:"var(--serra-fill)",campo:"var(--campo-fill)",tunnel:"var(--tunnel-fill)",vigna:"var(--vigna-fill)"};
+var STROKE={serra:"var(--serra)",campo:"var(--accent)",tunnel:"var(--tunnel)",vigna:"var(--vigna)"};
+var TYPEN={serra:"Serra",campo:"Pieno campo",tunnel:"Tunnel",vigna:"Vigna"};
+
+function vMappa(){
+  var all=[];S.plots.forEach(function(p){all=all.concat(p.pts)});
+  if(!VIEWS.map)fitView("map",all.length?bbox(all):{x0:0,y0:0,x1:100,y1:60},6);
+  var tot=S.plots.reduce(function(s,p){return s+area(p.pts)},0),sel=plotById(S.sel);
+  var h='<div class="top"><div><div class="eyebrow">Azienda · '+S.plots.length+' appezzamenti · '+m2(tot)+'</div><h1>Mappa</h1></div>';
+  h+=UI.draw?'':'<button class="btn primary" data-act="drawStart">Disegna area</button>';
+  h+='</div>';
+  h+='<div class="mapwrap"><svg id="mapsvg" role="img" aria-label="Mappa degli appezzamenti"></svg><div class="zoom"><button data-act="zin" data-k="map" aria-label="Ingrandisci">+</button><button data-act="zout" data-k="map" aria-label="Rimpicciolisci">−</button><button data-act="zfit" data-k="map" aria-label="Adatta" style="font-size:13px">⤢</button></div>';
+  if(UI.draw)h+='<div class="hint">'+(UI.draw.closed?'Forma chiusa. Dai un nome e salva.':'Tocca per aggiungere i vertici, trascina per spostare la vista. Tocca il primo punto per chiudere.')+'</div>';
+  h+='</div>';
+  if(UI.draw){
+    var d=UI.draw,ar=d.pts.length>2?area(d.pts):0;
+    h+='<div class="panel stack" style="margin-top:12px"><div class="row" style="justify-content:space-between"><h2>Nuova area</h2><span class="mono">'+(ar?m2(ar):d.pts.length+' punti')+'</span></div>';
+    if(!d.closed)h+='<div class="row"><button class="btn sm" data-act="drawUndo">Annulla punto</button><button class="btn sm" data-act="drawClose"'+(d.pts.length<3?' disabled':'')+'>Chiudi forma</button><button class="btn sm danger" data-act="drawCancel">Esci</button></div>';
+    else h+='<div class="grid2"><label class="f">Nome<input id="dName" value="'+esc(d.name)+'"></label><label class="f">Tipo<select id="dType">'+["serra","tunnel","campo","vigna"].map(function(t){return '<option value="'+t+'"'+(d.type===t?' selected':'')+'>'+TYPEN[t]+'</option>'}).join("")+'</select></label></div><div class="row"><button class="btn primary" data-act="drawSave">Salva area</button><button class="btn" data-act="drawCancel">Annulla</button></div>';
+    h+='<details><summary>Oppure inserisci le misure di un rettangolo</summary><div class="grid3" style="margin-top:8px"><label class="f">Lungh. (m)<input id="rL" type="number" inputmode="decimal" value="20"></label><label class="f">Largh. (m)<input id="rW" type="number" inputmode="decimal" value="8"></label><label class="f">Tipo<select id="rT"><option value="serra">Serra</option><option value="tunnel">Tunnel</option><option value="campo">Pieno campo</option><option value="vigna">Vigna</option></select></label></div><button class="btn sm" style="margin-top:8px" data-act="rectAdd">Crea rettangolo</button></details></div>';
+    return h;
+  }
+  h+='<div class="row" style="justify-content:space-between;margin:16px 0 8px"><h2>Appezzamenti</h2><span class="muted small">tocca sulla mappa o nell\'elenco</span></div><div class="list">';
+  S.plots.forEach(function(p){
+    var cs=cropsIn(p),names=Object.keys(cs).map(function(c){return CROPS[c].n}).join(", ")||"vuoto",hb=harvestBlock(p),due=S.plans.filter(function(x){var d=nextDue(x);return x.plot===p.id&&d&&d<=today()}).length;
+    h+='<button class="item" data-act="selPlot" data-id="'+p.id+'"'+(S.sel===p.id?' aria-current="true"':'')+'><span class="swatch" style="background:'+FILL[p.type]+';border-color:'+STROKE[p.type]+'"></span><span class="grow"><b>'+esc(p.name)+'</b><br><span class="muted small">'+TYPEN[p.type]+' · '+m2(area(p.pts))+' · '+esc(names)+'</span></span>'+(due?'<span class="badge b-warn">da trattare</span>':hb?'<span class="badge b-bad">no raccolta</span>':'')+'</button>';
+  });
+  h+='</div>';
+  if(sel){
+    h+='<div class="panel stack" style="margin-top:12px"><div class="row" style="justify-content:space-between"><h2>'+esc(sel.name)+'</h2><span class="badge b-n">'+TYPEN[sel.type]+'</span></div>';
+    h+='<div class="grid2"><label class="f">Nome<input id="pName" value="'+esc(sel.name)+'"></label><label class="f">Tipo<select id="pType">'+["serra","tunnel","campo","vigna"].map(function(t){return '<option value="'+t+'"'+(sel.type===t?' selected':'')+'>'+TYPEN[t]+'</option>'}).join("")+'</select></label></div>';
+    h+='<div class="row"><button class="btn primary" data-act="goImp">Apri impianto</button><button class="btn danger" data-act="delPlot">'+(UI.confirm==="plot"?'Tocca ancora per eliminare':'Elimina')+'</button></div></div>';
+  }
+  return h;
+}
+function drawMap(){
+  var svg=$("#mapsvg");if(!svg)return;var v=vbOf("map");
+  svg.setAttribute("viewBox",v.x+" "+v.y+" "+v.w+" "+v.h);
+  var fs=v.w/32,g="",step=v.w>150?20:10;
+  for(var x=Math.floor(v.x/step)*step;x<v.x+v.w;x+=step)g+='<line x1="'+x+'" y1="'+v.y+'" x2="'+x+'" y2="'+(v.y+v.h)+'" stroke="var(--line)" vector-effect="non-scaling-stroke"/>';
+  for(var y=Math.floor(v.y/step)*step;y<v.y+v.h;y+=step)g+='<line x1="'+v.x+'" y1="'+y+'" x2="'+(v.x+v.w)+'" y2="'+y+'" stroke="var(--line)" vector-effect="non-scaling-stroke"/>';
+  S.plots.forEach(function(p){
+    var pts=p.pts.map(function(q){return q.join(",")}).join(" "),b=bbox(p.pts),cx=(b.x0+b.x1)/2,cy=(b.y0+b.y1)/2,on=S.sel===p.id&&!UI.draw;
+    g+='<polygon points="'+pts+'" fill="'+FILL[p.type]+'" stroke="'+STROKE[p.type]+'" stroke-width="'+(on?3.5:1.8)+'" vector-effect="non-scaling-stroke" data-plot="'+p.id+'"/>';
+    g+='<text x="'+cx+'" y="'+cy+'" text-anchor="middle" font-size="'+fs+'" font-weight="700" font-family="Archivo,system-ui,sans-serif" fill="var(--ink)" pointer-events="none">'+esc(p.name)+'</text>';
+    g+='<text x="'+cx+'" y="'+(cy+fs*1.15)+'" text-anchor="middle" font-size="'+fs*0.8+'" font-family="Source Sans 3,system-ui,sans-serif" fill="var(--ink-2)" pointer-events="none">'+m2(area(p.pts))+'</text>';
+  });
+  if(UI.draw){
+    var d=UI.draw,P=d.pts,r=v.w/70;
+    if(P.length){
+      g+='<'+(d.closed?'polygon':'polyline')+' points="'+P.map(function(q){return q.join(",")}).join(" ")+'" fill="'+(d.closed?'var(--serra-fill)':'none')+'" fill-opacity="0.8" stroke="var(--serra)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>';
+      var n=d.closed?P.length:P.length-1;
+      for(var i=0;i<n;i++){var a=P[i],b2=P[(i+1)%P.length],L=Math.hypot(b2[0]-a[0],b2[1]-a[1]);g+='<text x="'+(a[0]+b2[0])/2+'" y="'+((a[1]+b2[1])/2-r*0.6)+'" text-anchor="middle" font-size="'+fs*0.85+'" font-weight="700" font-family="IBM Plex Mono,monospace" fill="var(--ink)" pointer-events="none">'+num(L)+' m</text>'}
+      P.forEach(function(q,i){g+='<circle cx="'+q[0]+'" cy="'+q[1]+'" r="'+(i===0&&!d.closed?r*1.4:r)+'" fill="'+(i===0?'var(--serra)':'var(--surface)')+'" stroke="var(--serra)" stroke-width="2" vector-effect="non-scaling-stroke"/>'});
+    }
+  }
+  var sb=step;g+='<g pointer-events="none"><rect x="'+(v.x+v.w*0.04)+'" y="'+(v.y+v.h*0.9)+'" width="'+sb+'" height="'+(v.h*0.012)+'" fill="var(--ink)"/><text x="'+(v.x+v.w*0.04)+'" y="'+(v.y+v.h*0.885)+'" font-size="'+fs*0.75+'" font-family="IBM Plex Mono,monospace" fill="var(--ink)">'+sb+' m</text></g>';
+  svg.innerHTML=g;
+}
+function mapTap(pt,e){
+  if(UI.draw){
+    var d=UI.draw;if(d.closed)return;var s=[Math.round(pt[0]*2)/2,Math.round(pt[1]*2)/2],v=vbOf("map");
+    if(d.pts.length>2&&Math.hypot(s[0]-d.pts[0][0],s[1]-d.pts[0][1])<v.w/30){d.closed=true;render();return}
+    d.pts.push(s);render();return;
+  }
+  var id=e.target&&e.target.getAttribute&&e.target.getAttribute("data-plot");
+  if(id){S.sel=id;UI.confirm=null;save();render()}
+}
+
+function vImpianto(){
+  var p=plotById(S.sel)||S.plots[0];
+  if(!p)return '<div class="top"><h1>Impianto</h1></div><div class="panel">Disegna prima un appezzamento nella mappa.</div>';
+  S.sel=p.id;
+  if(p.type==="vigna")return '<div class="top"><div><div class="eyebrow">'+esc(p.name)+'</div><h1>Orto</h1></div><select id="impSel" aria-label="Appezzamento" style="width:auto;max-width:48%">'+S.plots.map(function(q){return '<option value="'+q.id+'"'+(q.id===p.id?' selected':'')+'>'+esc(q.name)+'</option>'}).join("")+'</select></div><div class="panel stack"><span>Questa è una parcella di vigna: filari e ceppi si gestiscono nella sezione Vigna.</span><div><button class="btn primary" data-act="vOpen" data-id="'+p.id+'">Apri in Vigna</button></div></div>';
+  if(!VIEWS["imp-"+p.id]){fitView("imp-"+p.id,bbox(p.pts),1);VIEWS["imp-"+p.id].aspect=Math.min(1.1,Math.max(0.45,(bbox(p.pts).y1-bbox(p.pts).y0+2)/(bbox(p.pts).x1-bbox(p.pts).x0+2)))}
+  var cs=cropsIn(p),cf=conflicts(p),hb=harvestBlock(p);
+  var h='<div class="top"><div><div class="eyebrow">'+TYPEN[p.type]+' · '+m2(area(p.pts))+' · '+p.plants.length.toLocaleString("it-IT")+' piante</div><h1>Impianto</h1></div><select id="impSel" aria-label="Appezzamento" style="width:auto;max-width:48%">'+S.plots.map(function(q){return '<option value="'+q.id+'"'+(q.id===p.id?' selected':'')+'>'+esc(q.name)+'</option>'}).join("")+'</select></div>';
+  h+='<div class="row" style="margin-bottom:8px">'+[["pianta","Pianta"],["rimuovi","Rimuovi"],["sposta","Solo vista"]].map(function(m){return '<button class="btn sm" data-act="mode" data-m="'+m[0]+'" aria-pressed="'+(UI.mode===m[0])+'">'+m[1]+'</button>'}).join("")+'</div>';
+  h+='<div class="mapwrap"><svg id="impsvg" role="img" aria-label="Pianta dell\'appezzamento con le piante"></svg><div class="zoom"><button data-act="zin" data-k="imp-'+p.id+'" aria-label="Ingrandisci">+</button><button data-act="zout" data-k="imp-'+p.id+'" aria-label="Rimpicciolisci">−</button><button data-act="zfit" data-k="imp-'+p.id+'" aria-label="Adatta" style="font-size:13px">⤢</button></div></div>';
+  if(cf.bad.size){var mn=1e9;cf.bad.forEach(function(i){mn=Math.min(mn,cf.minD[i])});h+='<div class="panel risk" style="margin-top:10px;background:var(--warn-bg);color:var(--warn)"><b>!</b><div><b>'+cf.bad.size+' piante troppo vicine</b><br><span class="small">Distanza minima trovata '+Math.round(mn*100)+' cm. Usa "Rimuovi" e ripianta.</span></div></div>'}
+  if(hb)h+='<div class="panel risk" style="margin-top:10px;background:var(--bad-bg);color:var(--bad)"><b>⏱</b><div><b>Non raccogliere fino a '+fmt(hb.end)+'</b><br><span class="small">Tempo di carenza di '+PRODUCTS[hb.prod].n+'.</span></div></div>';
+  h+='<h2 style="margin:16px 0 8px">Coltura da piantare</h2><div class="row">'+Object.keys(CROPS).filter(function(c){return !CROPS[c].vine}).map(function(c){return '<button class="chip" data-act="crop" data-c="'+c+'" aria-pressed="'+(S.cropSel===c)+'"><span class="dot" style="background:'+CROPS[c].c+'"></span>'+CROPS[c].n+'</button>'}).join("")+'</div>';
+  var C=CROPS[S.cropSel];
+  h+='<div class="panel stack" style="margin-top:12px"><div class="row" style="justify-content:space-between"><h3>'+C.n+'</h3><span class="muted small">'+C.fam+' · ~'+C.days+' gg alla raccolta</span></div><div class="grid2"><div><div class="muted small">Sulla fila</div><b class="mono">'+C.row+' cm</b></div><div><div class="muted small">Tra le file</div><b class="mono">'+C.btw+' cm</b></div></div><div class="row"><button class="btn primary" data-act="fill">Riempi lo spazio libero a file</button><button class="btn danger" data-act="clear">'+(UI.confirm==="clear"?'Tocca ancora':'Svuota')+'</button></div><span class="muted small">Distanze indicative per l\'orto, valide come punto di partenza.</span></div>';
+  var keys=Object.keys(cs);
+  if(keys.length){h+='<h2 style="margin:16px 0 8px">In questo appezzamento</h2><div class="list">'+keys.map(function(c){var m2c=cs[c]*CROPS[c].row*CROPS[c].btw/1e4;return '<div class="item" style="cursor:default"><span class="dot" style="background:'+CROPS[c].c+'"></span><span class="grow"><b>'+CROPS[c].n+'</b><br><span class="muted small">'+CROPS[c].fam+'</span></span><span class="mono">'+cs[c].toLocaleString("it-IT")+'</span><span class="muted small">~'+num(m2c,0)+' m²</span></div>'}).join("")+'</div>'}
+  return h;
+}
+function drawImp(){
+  var svg=$("#impsvg");if(!svg)return;var p=plotById(S.sel),key="imp-"+p.id,v=vbOf(key);
+  svg.setAttribute("viewBox",v.x+" "+v.y+" "+v.w+" "+v.h);
+  var pts=p.pts.map(function(q){return q.join(",")}).join(" "),g='';
+  g+='<polygon points="'+pts+'" fill="var(--soil-2)" stroke="'+STROKE[p.type]+'" stroke-width="2.5" vector-effect="non-scaling-stroke"/>';
+  var step=v.w>40?5:1,bb=bbox(p.pts);
+  for(var x=Math.ceil(bb.x0/step)*step;x<bb.x1;x+=step)g+='<line x1="'+x+'" y1="'+bb.y0+'" x2="'+x+'" y2="'+bb.y1+'" stroke="var(--soil)" vector-effect="non-scaling-stroke" pointer-events="none"/>';
+  for(var y=Math.ceil(bb.y0/step)*step;y<bb.y1;y+=step)g+='<line x1="'+bb.x0+'" y1="'+y+'" x2="'+bb.x1+'" y2="'+y+'" stroke="var(--soil)" vector-effect="non-scaling-stroke" pointer-events="none"/>';
+  var cf=conflicts(p),detail=v.w<25;
+  p.plants.forEach(function(pl,i){
+    if(pl.x<v.x-1||pl.x>v.x+v.w+1||pl.y<v.y-1||pl.y>v.y+v.h+1)return;
+    var C=CROPS[pl.c],r=C.row/200,bad=cf.bad.has(i);
+    if(detail||bad)g+='<circle cx="'+pl.x+'" cy="'+pl.y+'" r="'+r+'" fill="'+(bad?'var(--warn)':C.c)+'" fill-opacity="'+(bad?0.35:0.18)+'" stroke="'+(bad?'var(--warn)':'var(--surface)')+'" stroke-width="'+(bad?2.5:1)+'" '+(bad?'':'stroke-dasharray="3 2" ')+'vector-effect="non-scaling-stroke" pointer-events="none"/>';
+    g+='<circle cx="'+pl.x+'" cy="'+pl.y+'" r="'+Math.max(r*0.45,v.w/260)+'" fill="'+C.c+'" pointer-events="none"/>';
+  });
+  var sb=step;g+='<g pointer-events="none"><rect x="'+(v.x+v.w*0.04)+'" y="'+(v.y+v.h*0.92)+'" width="'+sb+'" height="'+(v.h*0.012)+'" fill="var(--ink)"/><text x="'+(v.x+v.w*0.04)+'" y="'+(v.y+v.h*0.905)+'" font-size="'+v.w/30+'" font-family="IBM Plex Mono,monospace" fill="var(--ink)">'+sb+' m</text></g>';
+  svg.innerHTML=g;
+}
+function impTap(pt){
+  var p=plotById(S.sel);if(UI.mode==="sposta")return;
+  if(UI.mode==="rimuovi"){var best=-1,bd=1e9;p.plants.forEach(function(pl,i){var d=Math.hypot(pl.x-pt[0],pl.y-pt[1]);if(d<bd){bd=d;best=i}});var v=vbOf("imp-"+p.id);if(best>=0&&bd<Math.max(0.3,v.w/25)){p.plants.splice(best,1);save();render()}return}
+  if(!pip(pt,p.pts)){toast("Tocca dentro l'appezzamento");return}
+  var c=S.cropSel,x=Math.round(pt[0]*20)/20,y=Math.round(pt[1]*20)/20,close=null;
+  p.plants.forEach(function(q){var d=Math.hypot(q.x-x,q.y-y),n=needed(c,q.c);if(d<n*0.9&&(!close||d<close.d))close={d:d,n:n}});
+  p.plants.push({id:uid(),c:c,x:x,y:y});save();render();
+  if(close)toast("Troppo vicina: "+Math.round(close.d*100)+" cm, minimo "+Math.round(close.n*100)+" cm");
+}
+
+function vTratt(){
+  var t=today(),w=S.weather,R=risks();
+  var h='<div class="top"><div><div class="eyebrow">'+fmt(t)+'</div><h1>Trattamenti</h1></div><button class="btn primary" data-act="newPlan">Nuovo</button></div>';
+  /* striscia 7 giorni */
+  h+='<div class="strip">';for(var i=0;i<7;i++){var d=addDays(t,i),has=S.plans.some(function(pl){var n=nextDue(pl);return n&&(i===0?n<=d:iso(n)===iso(d))});h+='<div class="day'+(i===0?' today':'')+'"><span>'+GG[d.getDay()]+'</span><b>'+d.getDate()+'</b><i style="background:'+(has?(i===0?'var(--warn)':'var(--accent)'):'transparent')+'"></i></div>'}h+='</div>';
+  if(UI.planForm)h+=planFormHtml();
+  /* meteo e consiglio */
+  h+='<div class="panel stack" style="margin-top:12px"><div class="row" style="justify-content:space-between"><h2>Serve trattare?</h2><span class="muted small">dati meteo di oggi</span></div>';
+  h+='<div class="grid2"><label class="f">Temperatura media (°C)<input id="wT" type="number" inputmode="decimal" value="'+w.t+'"></label><label class="f">Umidità relativa (%)<input id="wRh" type="number" inputmode="numeric" value="'+w.rh+'"></label><label class="f">Ore di foglia bagnata<input id="wWet" type="number" inputmode="numeric" value="'+w.wet+'"></label><label class="f">Pioggia ultime 48 h (mm)<input id="wRain" type="number" inputmode="numeric" value="'+w.rain+'"></label></div>';
+  if(!R.length)h+='<div class="b-ok badge" style="padding:8px 10px;font-size:14px">Nessun rischio rilevante con questi valori.</div>';
+  R.forEach(function(r){
+    var st=r.prot?'<span class="badge b-ok">coperto fino a '+fmt(r.prot.until)+'</span>':r.lvl===2?'<span class="badge b-bad">rischio alto</span>':'<span class="badge b-warn">rischio medio</span>';
+    h+='<div class="sep"></div><div class="stack" style="gap:6px"><div class="row" style="justify-content:space-between"><b>'+DIS[r.dis].n+' · '+esc(r.plot.name)+'</b>'+st+'</div><span class="small muted">'+r.why+(r.washed?'. Il trattamento precedente è stato dilavato dalla pioggia ('+w.rain+' mm).':'')+(r.prot?'. Ultimo intervento con '+PRODUCTS[r.prot.prod].n+'.':'')+'</span>';
+    if(!r.prot)h+='<div class="row">'+r.sug.map(function(s){return '<button class="chip" data-act="planFrom" data-p="'+s+'" data-plot="'+r.plot.id+'">'+PRODUCTS[s].n+'</button>'}).join("")+'</div>';
+    h+='</div>';
+  });
+  h+='<span class="small muted">Regole semplificate: per i parassiti (afidi, cavolaia…) tratta solo quando li vedi.</span></div>';
+  /* piani */
+  var list=S.plans.map(function(pl){return {pl:pl,d:nextDue(pl)}}).sort(function(a,b){return (a.d?a.d:9e15)-(b.d?b.d:9e15)});
+  h+='<h2 style="margin:18px 0 8px">Programma</h2><div class="list">';
+  if(!list.length)h+='<div class="panel muted">Nessun trattamento programmato. Toccane uno tra i consigli o usa "Nuovo".</div>';
+  list.forEach(function(o){
+    var pl=o.pl,P=PRODUCTS[pl.prod],plot=plotById(pl.plot);if(!plot)return;var car=carenzaFor(pl.prod,plot),late=o.d&&o.d<t,now=o.d&&iso(o.d)===iso(t);
+    var badge=!o.d?'<span class="badge b-n">completato</span>':late?'<span class="badge b-bad">in ritardo · '+fmtRel(o.d)+'</span>':now?'<span class="badge b-warn">oggi</span>':'<span class="badge b-n">'+fmtRel(o.d)+'</span>';
+    h+='<div class="panel stack" style="gap:8px"><div class="row" style="justify-content:space-between;align-items:flex-start"><div style="min-width:0;flex:1"><b>'+P.n+'</b><br><span class="small muted">'+esc(plot.name)+' · ogni '+pl.every+' gg'+(pl.rain?' e dopo pioggia':'')+'</span></div>'+badge+'</div>';
+    h+='<div class="row"><span class="badge b-n">'+pl.done.length+' di '+pl.count+'</span><span class="badge b-n">carenza '+(car.days?car.days+' gg':'nessuna')+'</span>'+(P.copper?'<span class="badge b-n">'+num(+pl.cu||0,2)+' kg Cu/ha a passaggio</span>':'')+'</div>';
+    if(car.offLabel.length)h+='<div class="small" style="color:var(--bad)"><b>Attenzione:</b> '+car.offLabel.join(", ")+' non '+(car.offLabel.length>1?'sono':'è')+' in etichetta per questo prodotto. Verifica prima di trattare.</div>';
+    var mx=P.maxApp?Object.keys(cropsIn(plot)).map(function(c){return P.maxApp[c]}).filter(Boolean):[];if(P.maxAll)mx.push(P.maxAll);
+    if(mx.length&&pl.count>Math.min.apply(null,mx))h+='<div class="small" style="color:var(--warn)">Hai programmato '+pl.count+' passaggi, l\'etichetta ne consente al massimo '+Math.min.apply(null,mx)+' per coltura.</div>';
+    h+='<div class="row">'+(o.d?'<button class="btn sm primary" data-act="done" data-id="'+pl.id+'">Fatto oggi</button>':'')+(pl.done.length?'<button class="btn sm" data-act="undo" data-id="'+pl.id+'">Annulla ultimo</button>':'')+'<button class="btn sm danger" data-act="delPlan" data-id="'+pl.id+'">'+(UI.confirm===pl.id?'Tocca ancora':'Elimina')+'</button></div></div>';
+  });
+  h+='</div>';
+  /* rame */
+  var cu=S.plots.map(function(p){return {p:p,kg:copperYear(p)}}).filter(function(o){return o.kg>0});
+  h+='<h2 style="margin:18px 0 8px">Rame distribuito nel '+t.getFullYear()+'</h2><div class="panel stack">';
+  if(!cu.length)h+='<span class="muted">Nessun trattamento a base di rame registrato quest\'anno.</span>';
+  cu.forEach(function(o){var pc=Math.min(100,o.kg/4*100);h+='<div class="stack" style="gap:4px"><div class="row" style="justify-content:space-between"><b>'+esc(o.p.name)+'</b><span class="mono">'+num(o.kg,2)+' / 4 kg/ha</span></div><div class="bar"><span class="'+(pc>=100?'x':pc>=75?'w':'')+'" style="width:'+pc+'%"></span></div></div>'});
+  h+='<span class="small muted">Il limite di legge è 28 kg/ha in 7 anni, cioè 4 kg/ha l\'anno in media.</span></div>';
+  return h;
+}
+function planFormHtml(){
+  var f=UI.planForm,P=PRODUCTS[f.prod];
+  var h='<div class="panel stack" style="margin-top:12px;border:2px solid var(--accent)"><h2>Programma un trattamento</h2><div class="grid2">';
+  h+='<label class="f">Prodotto<select id="fProd">'+Object.keys(PRODUCTS).map(function(k){return '<option value="'+k+'"'+(k===f.prod?' selected':'')+'>'+PRODUCTS[k].n+'</option>'}).join("")+'</select></label>';
+  h+='<label class="f">Appezzamento<select id="fPlot">'+S.plots.map(function(p){return '<option value="'+p.id+'"'+(p.id===f.plot?' selected':'')+'>'+esc(p.name)+'</option>'}).join("")+'</select></label>';
+  h+='<label class="f">Primo trattamento<input id="fStart" type="date" value="'+f.start+'"></label>';
+  h+='<label class="f">Ripeti ogni (gg)<input id="fEvery" type="number" inputmode="numeric" value="'+f.every+'"></label>';
+  h+='<label class="f">Numero di passaggi<input id="fCount" type="number" inputmode="numeric" value="'+f.count+'"></label>';
+  if(P.copper)h+='<label class="f">Rame metallo per passaggio (kg/ha)<input id="fCu" type="number" inputmode="decimal" step="0.05" value="'+f.cu+'"></label>';
+  h+='</div><label class="row small" style="font-weight:600"><input id="fRain" type="checkbox"'+(f.rain?' checked':'')+'> Ripeti anche dopo una pioggia forte</label>';
+  h+='<div class="small muted">Etichetta: ogni '+P.every[0]+'-'+P.every[1]+' gg. '+(P.everyNote||'')+(P.copper?' Il rame metallo si ricava da dose × titolo indicati in etichetta.':'')+'</div>';
+  h+='<div class="row"><button class="btn primary" data-act="planSave">Salva</button><button class="btn" data-act="planCancel">Annulla</button></div></div>';
+  return h;
+}
+function vLib(){
+  var h='<div class="top"><div><div class="eyebrow">Solo biologico e biodinamico</div><h1>Libreria</h1></div></div>';
+  h+='<div class="panel small" style="margin-bottom:12px">Intervalli, carenze e limiti vengono dalle etichette e dai manuali regionali linkati. Le etichette cambiano tra un prodotto commerciale e l\'altro: per il tuo prodotto vale sempre la sua etichetta.</div><div class="list">';
+  Object.keys(PRODUCTS).forEach(function(k){
+    var P=PRODUCTS[k],car=typeof P.car==="number"?(P.car?P.car+' gg':'nessuna'):Object.keys(P.car).map(function(c){return CROPS[c].n+' '+P.car[c]}).join(", ")+' gg';
+    h+='<details class="panel"><summary><span style="flex:1">'+P.n+'</span><span class="badge b-n">'+P.level+'</span></summary><div class="stack" style="gap:8px;margin-top:8px"><span class="small muted">'+P.kind+(P.tgt.length?' · contro '+P.tgt.map(function(t){return DIS[t]?DIS[t].n.toLowerCase():t}).join(", "):'')+'</span><div class="grid2"><div><div class="muted small">Intervallo</div><b class="mono">'+P.every[0]+'-'+P.every[1]+' gg</b></div><div><div class="muted small">Carenza</div><b class="small">'+car+'</b></div></div><ul class="small" style="margin:0;padding-left:18px">'+P.notes.map(function(n){return '<li>'+n+'</li>'}).join("")+(P.everyNote?'<li>'+P.everyNote+'</li>':'')+'</ul>'+(P.src.length?P.src.map(function(s){return '<a class="src" href="'+SRC[s].u+'" target="_blank" rel="noopener">Fonte: '+SRC[s].t+'</a>'}).join(""):'<span class="src muted">Fonte: pratica di campo, nessuna etichetta.</span>')+'</div></details>';
+  });
+  h+='</div><h2 style="margin:18px 0 8px">Distanze di impianto</h2><div class="panel" style="overflow-x:auto"><table class="small" style="border-collapse:collapse;width:100%"><thead><tr style="text-align:left"><th style="padding:4px 6px">Coltura</th><th style="padding:4px 6px">Fila</th><th style="padding:4px 6px">Tra file</th><th style="padding:4px 6px">Famiglia</th></tr></thead><tbody>'+Object.keys(CROPS).filter(function(c){return !CROPS[c].vine}).map(function(c){var C=CROPS[c];return '<tr style="border-top:1px solid var(--line)"><td style="padding:4px 6px">'+C.n+'</td><td class="mono" style="padding:4px 6px">'+C.row+'</td><td class="mono" style="padding:4px 6px">'+C.btw+'</td><td style="padding:4px 6px">'+C.fam+'</td></tr>'}).join("")+'</tbody></table></div>';
+  var cloud=window.QOSync&&window.QOSync.active;
+  h+='<div class="row" style="margin-top:18px"><button class="btn" data-act="copy">Copia i dati</button>'+(cloud?'':'<button class="btn danger" data-act="reset">'+(UI.confirm==="reset"?'Tocca ancora: cancella tutto':'Ripristina esempio')+'</button>')+'</div><p class="small muted">'+(cloud?'I dati sono condivisi con l\'azienda e restano anche su questo dispositivo per l\'uso senza connessione.':'I dati restano salvati su questo dispositivo. Accedi dall\'alto per condividerli con i colleghi.')+'</p>';
+  return h;
+}
+
+/* =================== VIGNA =================== */
+var STAGES=[["riposo","Riposo vegetativo",0],["germ","Germogliamento",9],["foglie","Foglie distese",15],["grapp","Grappoli visibili",53],["fior","Piena fioritura",65],["alleg","Allegagione",71],["chius","Chiusura grappolo",79],["invai","Invaiatura",83],["matur","Maturazione",89],["cadu","Caduta foglie",93]];
+var STN={};STAGES.forEach(function(s){STN[s[0]]=s});
+var FORME=["Guyot","Cordone speronato","Alberello","Pergola","Doppio capovolto","Altro"];
+function vineDefaults(o){o=o||{};return {varieta:o.varieta||"",port:o.port||"",anno:+o.anno||new Date().getFullYear(),forma:o.forma||"Guyot",inter:+o.inter||2.5,row:+o.row||0.9,ori:o.ori==null||o.ori===""?0:+o.ori,marks:{},phen:[]}}
+function vignes(){return S.plots.filter(function(p){return p.type==="vigna"&&p.vine})}
+var VC={};
+function vdot(a,b){return a[0]*b[0]+a[1]*b[1]}
+function vineGeo(p){
+  var V=p.vine,key=JSON.stringify([p.pts,V.inter,V.row,V.ori]);if(VC[p.id]&&VC[p.id].key===key)return VC[p.id];
+  var th=V.ori*Math.PI/180,d=[Math.sin(th),-Math.cos(th)],n=[Math.cos(th),Math.sin(th)];
+  var inter=Math.max(0.5,+V.inter||2.5),rw=Math.max(0.2,+V.row||0.9);
+  var ss=p.pts.map(function(q){return vdot(q,n)}),smin=Math.min.apply(null,ss),smax=Math.max.apply(null,ss),rows=[],tot=0,len=0;
+  for(var s=smin+inter/2;s<smax&&rows.length<4000;s+=inter){
+    var ts=[];
+    for(var i=0;i<p.pts.length;i++){var a=p.pts[i],b=p.pts[(i+1)%p.pts.length],sa=vdot(a,n),sb=vdot(b,n);if((sa<=s&&sb>s)||(sb<=s&&sa>s)){var u=(s-sa)/(sb-sa);ts.push(vdot([a[0]+u*(b[0]-a[0]),a[1]+u*(b[1]-a[1])],d))}}
+    ts.sort(function(x,y){return x-y});var segs=[];
+    for(var k=0;k+1<ts.length;k+=2){var L=ts[k+1]-ts[k],c=Math.floor(L/rw);if(c>0){segs.push({t0:ts[k],t1:ts[k+1],c:c});tot+=c;len+=L}}
+    rows.push({s:s,segs:segs});
+  }
+  var g={key:key,d:d,n:n,rows:rows,smin:smin,inter:inter,rw:rw,ceppi:tot,len:len};VC[p.id]=g;return g;
+}
+function ceppoXY(g,r,k,i){var s=g.rows[r].s,t=g.rows[r].segs[k].t0+g.rw/2+i*g.rw;return [s*g.n[0]+t*g.d[0],s*g.n[1]+t*g.d[1]]}
+function vineStats(p){var g=vineGeo(p),f=0,s=0;Object.keys(p.vine.marks).forEach(function(k){if(p.vine.marks[k]==="f")f++;else if(p.vine.marks[k]==="s")s++});var ha=area(p.pts)/1e4;return {ceppi:g.ceppi,filari:g.rows.filter(function(r){return r.segs.length}).length,len:g.len,ha:ha,dens:ha?g.ceppi/ha:0,f:f,s:s}}
+function stageOf(p){var ph=p.vine.phen;return ph.length?ph[ph.length-1]:null}
+
+/* ---- import file GPS ---- */
+function parseGeoFile(text,fname){
+  var out=[],t=text.trim(),base=fname.replace(/\.[^.]+$/,"");
+  function push(name,ll){ll=ll.filter(function(a){return isFinite(a[0])&&isFinite(a[1])});if(ll.length>1&&ll[0][0]===ll[ll.length-1][0]&&ll[0][1]===ll[ll.length-1][1])ll.pop();if(ll.length>=3)out.push({name:name||base,ll:ll})}
+  function rev(c){return [c[1],c[0]]}
+  if(t[0]==="{"){
+    var j=JSON.parse(t),fs=j.type==="FeatureCollection"?j.features:j.type==="Feature"?[j]:[{geometry:j,properties:{}}];
+    fs.forEach(function(f,ix){var g=f.geometry||{},pr=f.properties||{},nm=pr.name||pr.nome||pr.NOME||pr.Name||pr.label||(fs.length>1?base+" "+(ix+1):base);
+      if(g.type==="Polygon")push(nm,g.coordinates[0].map(rev));
+      else if(g.type==="MultiPolygon")g.coordinates.forEach(function(pg,k){push(nm+(g.coordinates.length>1?" ("+(k+1)+")":""),pg[0].map(rev))});
+      else if(g.type==="LineString")push(nm,g.coordinates.map(rev));
+    });
+    return out;
+  }
+  var doc=new DOMParser().parseFromString(t,"application/xml");
+  if(doc.getElementsByTagName("parsererror").length)throw new Error("xml");
+  var pms=doc.getElementsByTagName("Placemark");
+  for(var i=0;i<pms.length;i++){var nmE=pms[i].getElementsByTagName("name")[0],cs=pms[i].getElementsByTagName("coordinates");
+    for(var c=0;c<cs.length;c++)push((nmE?nmE.textContent.trim():base+" "+(i+1))+(cs.length>1?" ("+(c+1)+")":""),cs[c].textContent.trim().split(/\s+/).map(function(x){var a=x.split(",");return [parseFloat(a[1]),parseFloat(a[0])]}))}
+  if(pms.length)return out;
+  var groups=[].slice.call(doc.getElementsByTagName("trk")).concat([].slice.call(doc.getElementsByTagName("rte")));
+  groups.forEach(function(gr,k){var pts=gr.getElementsByTagName(gr.tagName==="trk"?"trkpt":"rtept"),nmE=gr.getElementsByTagName("name")[0],ll=[];for(var q=0;q<pts.length;q++)ll.push([parseFloat(pts[q].getAttribute("lat")),parseFloat(pts[q].getAttribute("lon"))]);push(nmE?nmE.textContent.trim():base+" "+(k+1),ll)});
+  if(!groups.length){var w=doc.getElementsByTagName("wpt"),ll2=[];for(var q2=0;q2<w.length;q2++)ll2.push([parseFloat(w[q2].getAttribute("lat")),parseFloat(w[q2].getAttribute("lon"))]);push(base,ll2)}
+  return out;
+}
+function importPolys(polys,form){
+  var all=[];polys.forEach(function(p){all=all.concat(p.ll)});
+  if(!S.geo){var maxLat=-90,minLon=180;all.forEach(function(q){maxLat=Math.max(maxLat,q[0]);minLon=Math.min(minLon,q[1])});var ex=[];S.plots.forEach(function(p){ex=ex.concat(p.pts)});var bb=ex.length?bbox(ex):null;S.geo={lat0:maxLat,lon0:minLon,ox:bb?bb.x0:0,oy:bb?bb.y1+12:0}}
+  var G=S.geo,kx=Math.cos(G.lat0*Math.PI/180)*111320,made=[];
+  polys.forEach(function(pp){var pts=[];pp.ll.forEach(function(q){var x=Math.round((G.ox+(q[1]-G.lon0)*kx)*10)/10,y=Math.round((G.oy+(G.lat0-q[0])*110574)*10)/10,l=pts[pts.length-1];if(!l||Math.hypot(l[0]-x,l[1]-y)>=0.5)pts.push([x,y])});
+    if(pts.length>=3&&area(pts)>1){var pl={id:uid(),name:pp.name,type:"vigna",pts:pts,plants:[],vine:vineDefaults(form)};S.plots.push(pl);made.push(pl)}});
+  return made;
+}
+
+/* ---- viste ---- */
+function vVigna(){
+  if(!UI.vtab)UI.vtab="parcelle";if(!UI.vmode)UI.vmode="vista";if(UI.regVig==null)UI.regVig=true;
+  var vs=vignes();if(!plotById(UI.vsel)||!plotById(UI.vsel).vine)UI.vsel=vs[0]&&vs[0].id;
+  var tot=vs.reduce(function(s,p){return s+area(p.pts)},0),ce=vs.reduce(function(s,p){return s+vineGeo(p).ceppi},0);
+  var h='<div class="top"><div><div class="eyebrow">'+vs.length+' parcelle · '+num(tot/1e4,2)+' ha · '+ce.toLocaleString("it-IT")+' ceppi</div><h1>Vigna</h1></div>'+(UI.vtab==="parcelle"&&!UI.vedit?'<button class="btn primary" data-act="vNew">Nuova parcella</button>':'')+'</div>';
+  h+='<div class="seg" role="group" aria-label="Sezioni della vigna">'+[["parcelle","Parcelle"],["difesa","Difesa"],["botte","Botte"],["registro","Registro"],["matur","Maturazione"]].map(function(x){return '<button data-act="vTab" data-v="'+x[0]+'" aria-pressed="'+(UI.vtab===x[0])+'">'+x[1]+'</button>'}).join("")+'</div>';
+  return h+({parcelle:vParcelle,difesa:vDifesa,botte:vBotte,registro:vRegistro,matur:vMatur})[UI.vtab]();
+}
+function vFormHtml(){
+  var f=UI.vedit,isNew=!f.id,h='<div class="panel stack" style="border:2px solid var(--vigna)"><h2>'+(isNew?'Nuova parcella':'Dati della parcella')+'</h2>';
+  h+='<div class="grid2"><label class="f">Nome<input id="vfName" value="'+esc(f.name)+'"></label><label class="f">Varietà<input id="vfVar" value="'+esc(f.varieta)+'" placeholder="es. Sangiovese"></label><label class="f">Portinnesto<input id="vfPort" value="'+esc(f.port)+'" placeholder="es. 1103 Paulsen"></label><label class="f">Anno d\'impianto<input id="vfAnno" type="number" inputmode="numeric" value="'+f.anno+'"></label><label class="f">Forma di allevamento<select id="vfForma">'+FORME.map(function(x){return '<option'+(x===f.forma?' selected':'')+'>'+x+'</option>'}).join("")+'</select></label><label class="f">Orientamento filari (° da Nord)<input id="vfOri" type="number" inputmode="numeric" value="'+f.ori+'"></label><label class="f">Distanza tra filari (m)<input id="vfInter" type="number" inputmode="decimal" step="0.05" value="'+f.inter+'"></label><label class="f">Distanza sulla fila (m)<input id="vfRow" type="number" inputmode="decimal" step="0.05" value="'+f.row+'"></label></div>';
+  if(isNew){
+    h+='<div class="sep"></div><h3>Come vuoi creare la forma?</h3>';
+    h+='<div class="stack" style="gap:8px"><div class="row"><label class="btn filebtn" for="vfFile">Importa file GPS<input id="vfFile" type="file" accept=".gpx,.kml,.geojson,.json,application/gpx+xml,application/vnd.google-earth.kml+xml,application/geo+json,application/json"></label><button class="btn" data-act="vCreateDraw">Disegna sulla mappa</button></div><span class="small muted">GPX (percorso fatto a piedi lungo il perimetro), KML o GeoJSON. Se un file contiene più poligoni, ognuno diventa una parcella.</span>';
+    h+='<div class="grid2"><label class="f">Lunghezza (m)<input id="vfL" type="number" inputmode="decimal" value="'+(f.L||100)+'"></label><label class="f">Larghezza (m)<input id="vfW" type="number" inputmode="decimal" value="'+(f.W||50)+'"></label></div><div><button class="btn" data-act="vCreateRect">Crea come rettangolo</button></div></div>';
+    h+='<div class="row"><button class="btn" data-act="vCancel">Annulla</button></div>';
+  }else{
+    h+='<div class="row"><button class="btn primary" data-act="vSave">Salva</button><button class="btn" data-act="vCancel">Annulla</button><button class="btn danger" data-act="vDel">'+(UI.confirm==="vdel"?'Tocca ancora per eliminare':'Elimina parcella')+'</button></div>';
+    h+='<div class="row"><label class="btn sm filebtn" for="vfFile2">Sostituisci forma da file GPS<input id="vfFile2" type="file" accept=".gpx,.kml,.geojson,.json"></label></div>';
+  }
+  return h+'</div>';
+}
+function vParcelle(){
+  if(UI.vedit)return vFormHtml();
+  var vs=vignes();
+  if(!vs.length)return '<div class="panel stack"><h2>Nessuna parcella</h2><span>Aggiungi la prima con "Nuova parcella": puoi importare il file GPS del mappale, disegnarla sulla mappa o inserire le misure.</span></div>';
+  var h='<div class="list">';
+  vs.forEach(function(p){var st=vineStats(p),sg=stageOf(p);h+='<button class="item" data-act="vSel" data-id="'+p.id+'"'+(UI.vsel===p.id?' aria-current="true"':'')+'><span class="swatch" style="background:var(--vigna-fill);border-color:var(--vigna)"></span><span class="grow"><b>'+esc(p.name)+'</b><br><span class="muted small">'+esc(p.vine.varieta||"varietà da indicare")+' · '+num(st.ha,2)+' ha · '+st.ceppi.toLocaleString("it-IT")+' ceppi</span></span>'+(sg?'<span class="badge b-n">'+STN[sg.st][1]+'</span>':'')+'</button>'});
+  h+='</div>';
+  var p=plotById(UI.vsel);if(!p)return h;var st=vineStats(p),V=p.vine,sg=stageOf(p);
+  h+='<div class="row" style="justify-content:space-between;margin:16px 0 8px"><h2>'+esc(p.name)+'</h2><button class="btn sm" data-act="vEdit">Modifica dati</button></div>';
+  h+='<div class="row" style="margin-bottom:8px">'+[["vista","Vista"],["f","Segna fallanza"],["s","Segna sintomi"],["ok","Togli segno"]].map(function(m){return '<button class="btn sm" data-act="vMode" data-m="'+m[0]+'" aria-pressed="'+(UI.vmode===m[0])+'">'+m[1]+'</button>'}).join("")+'</div>';
+  h+='<div class="mapwrap"><svg id="vinesvg" role="img" aria-label="Filari e ceppi della parcella"></svg><div class="zoom"><button data-act="zin" data-k="vine-'+p.id+'" aria-label="Ingrandisci">+</button><button data-act="zout" data-k="vine-'+p.id+'" aria-label="Rimpicciolisci">−</button><button data-act="zfit" data-k="vine-'+p.id+'" aria-label="Adatta" style="font-size:13px">⤢</button></div><div class="hint">'+(UI.vmode==="vista"?'Ingrandisci per vedere i ceppi, tocca un ceppo per sapere filare e numero.':'Tocca un ceppo per '+(UI.vmode==="f"?'segnarlo come fallanza':UI.vmode==="s"?'segnare sintomi':'togliere il segno')+'.')+'</div></div>';
+  h+='<div class="panel stack" style="margin-top:10px"><div class="kv"><div><span>Superficie</span><b>'+num(st.ha,2)+' ha</b></div><div><span>Filari</span><b>'+st.filari+'</b></div><div><span>Ceppi</span><b>'+st.ceppi.toLocaleString("it-IT")+'</b></div><div><span>Ceppi/ha</span><b>'+Math.round(st.dens).toLocaleString("it-IT")+'</b></div><div><span>Metri di filare</span><b>'+Math.round(st.len).toLocaleString("it-IT")+'</b></div><div><span>Sesto</span><b>'+num(V.inter,2)+' × '+num(V.row,2)+'</b></div></div>';
+  h+='<div class="sep"></div><div class="small">'+esc(V.varieta||"Varietà non indicata")+(V.port?' su '+esc(V.port):'')+' · '+esc(V.forma)+' · impianto '+V.anno+' · filari a '+V.ori+'° da Nord</div>';
+  h+='<div class="row"><span class="badge '+(st.f?'b-bad':'b-n')+'">'+st.f+' fallanze</span><span class="badge '+(st.s?'b-warn':'b-n')+'">'+st.s+' con sintomi</span>'+(st.f?'<span class="small muted">Barbatelle da ordinare: '+st.f+'</span>':'')+'</div></div>';
+  h+='<div class="panel stack" style="margin-top:10px"><div class="row" style="justify-content:space-between"><h3>Fenologia</h3><span class="badge b-n">'+(sg?STN[sg.st][1]+' · BBCH '+STN[sg.st][2]:'non registrata')+'</span></div><div class="grid2"><label class="f">Fase<select id="vStage">'+STAGES.map(function(s){return '<option value="'+s[0]+'">'+s[1]+' (BBCH '+s[2]+')</option>'}).join("")+'</select></label><label class="f">Data<input id="vStageDate" type="date" value="'+iso(today())+'"></label></div><div><button class="btn sm" data-act="vPhenAdd">Registra fase</button></div>';
+  if(V.phen.length)h+='<div class="small muted">'+V.phen.slice().reverse().slice(0,6).map(function(x){return STN[x.st][1]+' '+fmt(parse(x.date))}).join(" · ")+'</div>';
+  h+='</div>';
+  return h;
+}
+function drawVine(){
+  var svg=$("#vinesvg");if(!svg)return;var p=plotById(UI.vsel);if(!p)return;var key="vine-"+p.id;
+  if(!VIEWS[key]){var b=bbox(p.pts);fitView(key,b,2);VIEWS[key].aspect=Math.min(1.1,Math.max(0.5,(b.y1-b.y0+4)/(b.x1-b.x0+4)))}
+  var v=vbOf(key);svg.setAttribute("viewBox",v.x+" "+v.y+" "+v.w+" "+v.h);
+  var g=vineGeo(p),M=p.vine.marks,out='<polygon points="'+p.pts.map(function(q){return q.join(",")}).join(" ")+'" fill="var(--vigna-fill)" stroke="var(--vigna)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>';
+  g.rows.forEach(function(r){r.segs.forEach(function(sg){var a=[r.s*g.n[0]+sg.t0*g.d[0],r.s*g.n[1]+sg.t0*g.d[1]],b2=[r.s*g.n[0]+sg.t1*g.d[0],r.s*g.n[1]+sg.t1*g.d[1]];out+='<line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b2[0]+'" y2="'+b2[1]+'" stroke="var(--vigna)" stroke-opacity="0.55" stroke-width="1.2" vector-effect="non-scaling-stroke" pointer-events="none"/>'})});
+  var detail=v.w<70,rr=Math.max(g.rw*0.22,v.w/300),mr=Math.max(g.rw*0.35,v.w/90);
+  if(detail)g.rows.forEach(function(r,ri){r.segs.forEach(function(sg,k){for(var i=0;i<sg.c;i++){var q=ceppoXY(g,ri,k,i);if(q[0]<v.x-1||q[0]>v.x+v.w+1||q[1]<v.y-1||q[1]>v.y+v.h+1)continue;if(M[ri+":"+k+":"+i])continue;out+='<circle cx="'+q[0]+'" cy="'+q[1]+'" r="'+rr+'" fill="var(--vigna)" pointer-events="none"/>'}})});
+  Object.keys(M).forEach(function(key2){var a=key2.split(":").map(Number);if(!g.rows[a[0]]||!g.rows[a[0]].segs[a[1]]||a[2]>=g.rows[a[0]].segs[a[1]].c)return;var q=ceppoXY(g,a[0],a[1],a[2]);out+=M[key2]==="f"?'<circle cx="'+q[0]+'" cy="'+q[1]+'" r="'+mr+'" fill="var(--surface)" stroke="var(--bad)" stroke-width="2.5" vector-effect="non-scaling-stroke" pointer-events="none"/>':'<circle cx="'+q[0]+'" cy="'+q[1]+'" r="'+mr+'" fill="var(--warn)" stroke="var(--surface)" stroke-width="1.5" vector-effect="non-scaling-stroke" pointer-events="none"/>'});
+  var sb=v.w>150?20:v.w>40?10:2;out+='<g pointer-events="none"><rect x="'+(v.x+v.w*0.04)+'" y="'+(v.y+v.h*0.9)+'" width="'+sb+'" height="'+(v.h*0.012)+'" fill="var(--ink)"/><text x="'+(v.x+v.w*0.04)+'" y="'+(v.y+v.h*0.885)+'" font-size="'+v.w/30+'" font-family="IBM Plex Mono,monospace" fill="var(--ink)">'+sb+' m</text><text x="'+(v.x+v.w*0.96)+'" y="'+(v.y+v.h*0.08)+'" text-anchor="end" font-size="'+v.w/28+'" font-weight="700" font-family="Archivo,sans-serif" fill="var(--ink)">N ↑</text></g>';
+  svg.innerHTML=out;
+}
+function vineTap(pt){
+  var p=plotById(UI.vsel),g=vineGeo(p),s=vdot(pt,g.n),t=vdot(pt,g.d),ri=Math.round((s-(g.smin+g.inter/2))/g.inter),r=g.rows[ri];
+  if(!r){return}
+  var best=null;r.segs.forEach(function(sg,k){var i=Math.round((t-sg.t0-g.rw/2)/g.rw);i=Math.max(0,Math.min(sg.c-1,i));var q=ceppoXY(g,ri,k,i),d=Math.hypot(q[0]-pt[0],q[1]-pt[1]);if(!best||d<best.d)best={k:k,i:i,d:d}});
+  var v=vbOf("vine-"+p.id);if(!best||best.d>Math.max(g.rw,v.w/35)){if(UI.vmode!=="vista")toast("Tocca più vicino a un ceppo");return}
+  var key=ri+":"+best.k+":"+best.i,lab="Filare "+(ri+1)+", ceppo "+(best.i+1)+(r.segs.length>1?" (tratto "+(best.k+1)+")":"");
+  if(UI.vmode==="vista"){var m=p.vine.marks[key],mm=S.marksMeta&&S.marksMeta[p.id]&&S.marksMeta[p.id][key];toast(lab+(m==="f"?": fallanza":m==="s"?": sintomi":"")+(m&&mm&&mm.da?", segnata da "+mm.da+(mm.quando?" il "+fmt(new Date(mm.quando)):""):""));return}
+  if(UI.vmode==="ok")delete p.vine.marks[key];else p.vine.marks[key]=UI.vmode;
+  save();render();toast(lab+(UI.vmode==="f"?": fallanza segnata":UI.vmode==="s"?": sintomi segnati":": segno tolto"));
+}
+
+function vDifesa(){
+  var w=S.vw,c1=w.t>=10,c2=w.rain>=10,c3=w.shoot>=10,all=c1&&c2&&c3,vs=vignes(),y=today().getFullYear();
+  var ck=function(ok,txt){return '<div class="row" style="gap:6px"><span class="badge '+(ok?'b-bad':'b-n')+'">'+(ok?'sì':'no')+'</span><span class="small">'+txt+'</span></div>'};
+  var h='<div class="panel stack"><div class="row" style="justify-content:space-between"><h2>Peronospora: regola dei tre 10</h2></div>';
+  h+='<div class="grid3"><label class="f">Temp. media (°C)<input id="vwT" type="number" inputmode="decimal" value="'+w.t+'"></label><label class="f">Pioggia 24-48 h (mm)<input id="vwRain" type="number" inputmode="decimal" value="'+w.rain+'"></label><label class="f">Germogli (cm)<input id="vwShoot" type="number" inputmode="decimal" value="'+w.shoot+'"></label></div>';
+  h+=ck(c1,"Temperatura di almeno 10 °C")+ck(c2,"Almeno 10 mm di pioggia in 24-48 ore")+ck(c3,"Germogli lunghi almeno 10 cm");
+  h+=all?'<div class="panel" style="background:var(--bad-bg);color:var(--bad)"><b>Ci sono le condizioni per le infezioni primarie.</b><br><span class="small">Le parcelle non coperte possono infettarsi con questa pioggia. Proteggi prima delle prossime piogge.</span></div>':'<div class="panel" style="background:var(--ok-bg);color:var(--accent)"><b>Condizioni per le infezioni primarie non raggiunte.</b></div>';
+  h+='<span class="small muted">Regola empirica usata nei bollettini per l\'inizio stagione. Il calcolo dell\'incubazione (tabelle di Goidanich) è il prossimo passo.</span></div>';
+  h+='<h2 style="margin:18px 0 8px">Stato delle parcelle</h2><div class="list">';
+  vs.forEach(function(p){var last=lastFor(p,"peronospora"),cover=last?addDays(last.d,last.pl.every):null,ok=cover&&cover>=today(),kg=copperYear(p),pc=Math.min(100,kg/4*100),sg=stageOf(p),hb=harvestBlock(p),n=S.plans.filter(function(x){return x.plot===p.id&&x.prod==="rame"}).reduce(function(s,x){return s+x.done.filter(function(d){return parse(d).getFullYear()===y}).length},0);
+    h+='<div class="panel stack" style="gap:8px"><div class="row" style="justify-content:space-between"><b>'+esc(p.name)+'</b><span class="badge '+(ok?'b-ok':'b-n')+'">'+(ok?'coperto fino a '+fmt(cover):last?'ultimo antiperonosporico '+fmt(last.d):'nessun trattamento')+'</span></div>';
+    h+='<span class="small muted">'+(sg?STN[sg.st][1]+' dal '+fmt(parse(sg.date)):'Fenologia non registrata')+'</span>';
+    h+='<div class="stack" style="gap:4px"><div class="row" style="justify-content:space-between"><span class="small">Rame '+y+' · '+n+' di 4 passaggi in etichetta</span><span class="mono small">'+num(kg,2)+' / 4 kg/ha</span></div><div class="bar"><span class="'+(pc>=100?'x':pc>=75?'w':'')+'" style="width:'+pc+'%"></span></div></div>';
+    if(hb)h+='<span class="small" style="color:var(--bad)">Non vendemmiare fino a '+fmt(hb.end)+' (carenza '+PRODUCTS[hb.prod].n+').</span>';
+    h+='<div class="row">'+["rame","zolfo","bicarb","equiseto","bt"].map(function(k){return '<button class="chip" data-act="vPlan" data-p="'+k+'" data-plot="'+p.id+'">'+PRODUCTS[k].n.replace(/ \(.+\)/,"")+'</button>'}).join("")+'</div></div>'});
+  h+='</div><p class="small muted">Rame sulla vite: 7-14 gg tra un passaggio e l\'altro, al massimo 4 l\'anno, carenza 28 gg, dose massima 3,5 kg/ha di prodotto. Zolfo: sotto 10 °C non agisce. Bacillus thuringiensis contro le tignole.</p>';
+  return h;
+}
+function vBotte(){
+  var B=S.botte,vs=vignes(),P=PRODUCTS[B.prod];
+  var ha=vs.filter(function(p){return B.sel[p.id]}).reduce(function(s,p){return s+area(p.pts)/1e4},0);
+  var water=ha*B.water,prod=ha*B.dose,nb=water>0?Math.ceil(water/B.tank-1e-9):0,per=B.water>0?B.dose*B.tank/B.water:0,lastW=nb?water-(nb-1)*B.tank:0,lastP=B.water>0?lastW*B.dose/B.water:0,u=B.unit;
+  var h='<div class="panel stack"><h2>Calcolo della botte</h2><div class="stack" style="gap:6px">'+vs.map(function(p){return '<label class="row small" style="font-weight:600"><input type="checkbox" id="bp-'+p.id+'"'+(B.sel[p.id]?' checked':'')+'> '+esc(p.name)+' <span class="muted">'+num(area(p.pts)/1e4,2)+' ha</span></label>'}).join("")+'</div>';
+  h+='<div class="grid2"><label class="f">Prodotto<select id="bProd">'+Object.keys(PRODUCTS).map(function(k){return '<option value="'+k+'"'+(k===B.prod?' selected':'')+'>'+PRODUCTS[k].n+'</option>'}).join("")+'</select></label><label class="f">Dose per ettaro<span class="row" style="flex-wrap:nowrap;gap:6px"><input id="bDose" type="number" inputmode="decimal" step="0.1" value="'+B.dose+'"><select id="bUnit" style="width:80px"><option'+(u==="kg"?' selected':'')+'>kg</option><option'+(u==="L"?' selected':'')+'>L</option></select></span></label><label class="f">Acqua (L/ha)<input id="bWater" type="number" inputmode="numeric" value="'+B.water+'"></label><label class="f">Capacità botte (L)<input id="bTank" type="number" inputmode="numeric" value="'+B.tank+'"></label>'+(P.copper?'<label class="f">Rame metallo nel prodotto (%)<input id="bTit" type="number" inputmode="decimal" value="'+B.tit+'"></label>':'')+'</div></div>';
+  h+='<div class="panel stack" style="margin-top:10px"><div class="kv"><div><span>Superficie</span><b>'+num(ha,2)+' ha</b></div><div><span>Acqua totale</span><b>'+Math.round(water).toLocaleString("it-IT")+' L</b></div><div><span>Prodotto totale</span><b>'+num(prod,2)+' '+u+'</b></div><div><span>Botti</span><b>'+nb+'</b></div><div><span>Per botte piena</span><b>'+num(per,2)+' '+u+'</b></div><div><span>Ultima botte</span><b>'+Math.round(lastW)+' L · '+num(lastP,2)+' '+u+'</b></div></div>';
+  if(P.copper){var cu=u==="kg"?B.dose*B.tit/100:0;h+='<div class="sep"></div><span class="small">Rame metallo per passaggio: <b class="mono">'+num(cu,2)+' kg/ha</b>.</span>';
+    if(P.maxDose&&u==="kg"&&B.dose>P.maxDose)h+='<span class="small" style="color:var(--bad)">L\'etichetta verificata consente al massimo '+num(P.maxDose)+' kg/ha di prodotto sulla vite.</span>';
+    vs.filter(function(p){return B.sel[p.id]}).forEach(function(p){var tot=copperYear(p)+cu;h+='<span class="small">'+esc(p.name)+': con questo passaggio arrivi a <b class="mono">'+num(tot,2)+'</b> kg/ha nel '+today().getFullYear()+(tot>4?' <span style="color:var(--bad)">(sopra la media di 4 kg/ha)</span>':'')+'.</span>'})}
+  h+='<span class="small muted">La dose va presa dall\'etichetta del tuo prodotto. Il volume d\'acqua dipende da fase vegetativa e atomizzatore.</span></div>';
+  return h;
+}
+function regRows(){
+  var rows=[];S.plans.forEach(function(pl){var p=plotById(pl.plot);if(!p||(UI.regVig&&p.type!=="vigna"))return;pl.done.forEach(function(d){var c=carenzaFor(pl.prod,p).days;rows.push({d:d,p:p,pl:pl,car:c?iso(addDays(parse(d),c)):""})})});
+  return rows.sort(function(a,b){return a.d<b.d?1:-1});
+}
+function vRegistro(){
+  var rows=regRows();
+  var h='<div class="row" style="justify-content:space-between;margin-bottom:8px"><div class="seg" style="margin:0"><button data-act="vReg" data-v="1" aria-pressed="'+UI.regVig+'">Solo vigna</button><button data-act="vReg" data-v="0" aria-pressed="'+(!UI.regVig)+'">Tutta l\'azienda</button></div><button class="btn sm" data-act="vRegCopy">Copia come tabella</button></div>';
+  h+='<div class="panel tablebox"><table class="reg"><thead><tr><th>Data</th><th>Appezzamento</th><th>Ha</th><th>Coltura</th><th>Prodotto</th><th>Cu kg/ha</th><th>Carenza fino al</th></tr></thead><tbody>';
+  if(!rows.length)h+='<tr><td colspan="7" class="muted">Nessun trattamento registrato. Segna "Fatto oggi" nella sezione Trattamenti.</td></tr>';
+  rows.forEach(function(r){h+='<tr><td class="mono">'+fmt(parse(r.d))+'</td><td>'+esc(r.p.name)+'</td><td class="mono">'+num(area(r.p.pts)/1e4,2)+'</td><td>'+Object.keys(cropsIn(r.p)).map(function(c){return CROPS[c].n}).join(", ")+'</td><td>'+PRODUCTS[r.pl.prod].n+'</td><td class="mono">'+(PRODUCTS[r.pl.prod].copper?num(+r.pl.cu||0,2):'')+'</td><td class="mono">'+(r.car?fmt(parse(r.car)):'')+'</td></tr>'});
+  h+='</tbody></table></div><p class="small muted">"Copia come tabella" copia i dati separati da punto e virgola: incollali in un foglio di calcolo per il quaderno di campagna.</p>';
+  return h;
+}
+function miniChart(pts,key,title,unit,color){
+  if(pts.length<2)return '';
+  var W=340,H=150,L=36,R=40,T=12,B=26,d0=parse(pts[0].date),span=Math.max(1,diffDays(parse(pts[pts.length-1].date),d0));
+  var vals=pts.map(function(p){return p[key]}),mn=Math.floor(Math.min.apply(null,vals)-0.5),mx=Math.ceil(Math.max.apply(null,vals)+0.5);if(mx===mn)mx=mn+1;
+  var X=function(p){return L+diffDays(parse(p.date),d0)/span*(W-L-R)},Y=function(v){return T+(mx-v)/(mx-mn)*(H-T-B)};
+  var s='<figure style="margin:0"><figcaption class="small" style="font-weight:700;margin-bottom:4px">'+title+'</figcaption><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+title+' nel tempo" style="width:100%;height:auto;display:block">';
+  var step=(mx-mn)>6?2:1;for(var v=mn;v<=mx;v+=step)s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)" stroke-width="1"/><text x="'+(L-6)+'" y="'+(Y(v)+4)+'" text-anchor="end" font-size="11" fill="var(--ink-2)" font-family="IBM Plex Mono,monospace">'+v+'</text>';
+  s+='<path d="'+pts.map(function(p,i){return (i?'L':'M')+X(p).toFixed(1)+' '+Y(p[key]).toFixed(1)}).join(" ")+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+  pts.forEach(function(p,i){var tip=fmt(parse(p.date))+': '+num(p[key],2)+' '+unit;s+='<circle cx="'+X(p)+'" cy="'+Y(p[key])+'" r="4" fill="'+color+'" stroke="var(--surface)" stroke-width="2"/><circle cx="'+X(p)+'" cy="'+Y(p[key])+'" r="14" fill="transparent" data-act="tip" data-t="'+esc(tip)+'" style="cursor:pointer"><title>'+esc(tip)+'</title></circle>'});
+  var lp=pts[pts.length-1];s+='<text x="'+(X(lp)+8)+'" y="'+(Y(lp[key])+4)+'" font-size="12" font-weight="700" fill="var(--ink)" font-family="IBM Plex Mono,monospace">'+num(lp[key],1)+'</text>';
+  s+='<text x="'+L+'" y="'+(H-6)+'" font-size="11" fill="var(--ink-2)">'+fmt(d0)+'</text><text x="'+(W-R)+'" y="'+(H-6)+'" text-anchor="end" font-size="11" fill="var(--ink-2)">'+fmt(parse(lp.date))+'</text></svg></figure>';
+  return s;
+}
+function vMatur(){
+  var vs=vignes();if(!vs.length)return '<div class="panel">Aggiungi prima una parcella.</div>';
+  if(!UI.vmSel||!plotById(UI.vmSel))UI.vmSel=UI.vsel||vs[0].id;
+  var smp=(S.samples||[]).filter(function(x){return x.plot===UI.vmSel}).sort(function(a,b){return a.date<b.date?-1:1});
+  var h='<div class="row" style="margin-bottom:10px"><label class="f" style="flex:1">Parcella<select id="vmSel">'+vs.map(function(p){return '<option value="'+p.id+'"'+(p.id===UI.vmSel?' selected':'')+'>'+esc(p.name)+'</option>'}).join("")+'</select></label></div>';
+  if(smp.length>=2){
+    var a=smp[smp.length-2],b=smp[smp.length-1],dd=Math.max(1,diffDays(parse(b.date),parse(a.date))),rate=(b.brix-a.brix)/dd*7;
+    h+='<div class="panel stack"><div class="kv"><div><span>Zuccheri</span><b>'+num(b.brix)+' °Bx</b></div><div><span>Acidità tot.</span><b>'+num(b.ac)+' g/L</b></div><div><span>pH</span><b>'+num(b.ph,2)+'</b></div></div><span class="small muted">Ultimo campione '+fmt(parse(b.date))+'. Zuccheri '+(rate>=0?'+':'')+num(rate)+' °Bx a settimana rispetto al precedente.</span></div>';
+    h+='<div class="panel stack" style="margin-top:10px">'+miniChart(smp,"brix","Zuccheri (°Brix)","°Bx","var(--vigna)")+miniChart(smp,"ac","Acidità totale (g/L)","g/L","var(--serra)")+'</div>';
+  }else h+='<div class="panel muted">Servono almeno due campionamenti per vedere la curva.</div>';
+  h+='<div class="panel stack" style="margin-top:10px"><h3>Nuovo campionamento</h3><div class="grid2"><label class="f">Data<input id="vmDate" type="date" value="'+iso(today())+'"></label><label class="f">Zuccheri (°Brix)<input id="vmBrix" type="number" inputmode="decimal" step="0.1"></label><label class="f">Acidità totale (g/L)<input id="vmAc" type="number" inputmode="decimal" step="0.1"></label><label class="f">pH<input id="vmPh" type="number" inputmode="decimal" step="0.01"></label></div><div><button class="btn primary" data-act="vmAdd">Aggiungi</button></div></div>';
+  if(smp.length){h+='<div class="panel tablebox" style="margin-top:10px"><table class="reg"><thead><tr><th>Data</th><th>°Brix</th><th>Acidità g/L</th><th>pH</th><th></th></tr></thead><tbody>'+smp.slice().reverse().map(function(x){return '<tr><td class="mono">'+fmt(parse(x.date))+'</td><td class="mono">'+num(x.brix)+'</td><td class="mono">'+num(x.ac)+'</td><td class="mono">'+num(x.ph,2)+'</td><td><button class="btn sm" data-act="vmDel" data-id="'+x.id+'" aria-label="Elimina campione">Elimina</button></td></tr>'}).join("")+'</tbody></table></div>'}
+  if(smp.length&&smp[0].date.slice(0,4)<String(today().getFullYear()))h+='<p class="small muted">I campioni di esempio sono della vendemmia passata.</p>';
+  return h;
+}
+
+/* ---- azioni ---- */
+function readVForm(){var f=UI.vedit;if(!f)return;var g=function(i){var el=$(i);return el?el.value:null};f.name=(g("#vfName")||"Parcella").trim();f.varieta=g("#vfVar")||"";f.port=g("#vfPort")||"";f.anno=parseInt(g("#vfAnno"),10)||today().getFullYear();f.forma=g("#vfForma")||"Guyot";f.ori=parseFloat(g("#vfOri"))||0;f.inter=parseFloat(g("#vfInter"))||2.5;f.row=parseFloat(g("#vfRow"))||0.9;if($("#vfL")){f.L=parseFloat(g("#vfL"));f.W=parseFloat(g("#vfW"))}}
+function contentBottom(){var ex=[];S.plots.forEach(function(p){ex=ex.concat(p.pts)});return ex.length?bbox(ex):{x0:0,y1:-6}}
+var VACT={
+  vOpen:function(b,id){UI.tab="vigna";UI.vtab="parcelle";UI.vsel=id},
+  vTab:function(b){UI.vtab=b.getAttribute("data-v");UI.vedit=null},
+  vSel:function(b,id){UI.vsel=id;S.sel=id;save()},
+  vNew:function(){UI.vedit={name:"Parcella "+(vignes().length+1),varieta:"",port:"",anno:today().getFullYear(),forma:"Guyot",inter:2.5,row:0.9,ori:0,L:100,W:50};window.scrollTo(0,0)},
+  vEdit:function(){var p=plotById(UI.vsel),V=p.vine;UI.vedit={id:p.id,name:p.name,varieta:V.varieta,port:V.port,anno:V.anno,forma:V.forma,inter:V.inter,row:V.row,ori:V.ori};window.scrollTo(0,0)},
+  vCancel:function(){UI.vedit=null},
+  vCreateRect:function(){readVForm();var f=UI.vedit;if(!(f.L>0&&f.W>0)){toast("Inserisci lunghezza e larghezza");return false}var bb=contentBottom(),p={id:uid(),name:f.name,type:"vigna",pts:rect(bb.x0,bb.y1+6,f.L,f.W),plants:[],vine:vineDefaults(f)};S.plots.push(p);UI.vsel=p.id;S.sel=p.id;UI.vedit=null;delete VIEWS.map;save();toast("Parcella creata: "+num(f.L*f.W/1e4,2)+" ha")},
+  vCreateDraw:function(){readVForm();UI.pendingVine=UI.vedit;UI.vedit=null;UI.tab="mappa";UI.draw={pts:[],closed:false,name:UI.pendingVine.name,type:"vigna"};var bb=contentBottom();if(bb.x1!=null)fitView("map",{x0:bb.x0,y0:bb.y0,x1:bb.x1+40,y1:bb.y1+40},6);toast("Tocca i vertici della parcella sulla mappa")},
+  vSave:function(){readVForm();var f=UI.vedit,p=plotById(f.id);p.name=f.name;["varieta","port","anno","forma","inter","row","ori"].forEach(function(k){p.vine[k]=f[k]});UI.vedit=null;save();toast("Parcella aggiornata")},
+  vDel:function(){if(UI.confirm!=="vdel"){UI.confirm="vdel";return}var id=UI.vedit.id;S.plans=S.plans.filter(function(x){return x.plot!==id});S.samples=(S.samples||[]).filter(function(x){return x.plot!==id});S.plots=S.plots.filter(function(x){return x.id!==id});UI.vedit=null;UI.confirm=null;UI.vsel=null;delete VIEWS.map;save()},
+  vMode:function(b){UI.vmode=b.getAttribute("data-m")},
+  vPhenAdd:function(){var p=plotById(UI.vsel),st=$("#vStage").value,d=$("#vStageDate").value||iso(today());p.vine.phen.push({st:st,date:d});p.vine.phen.sort(function(a,b){return a.date<b.date?-1:1});save();toast(STN[st][1]+" registrato")},
+  vPlan:function(b){var k=b.getAttribute("data-p"),P=PRODUCTS[k];UI.planForm={prod:k,plot:b.getAttribute("data-plot"),start:iso(today()),every:P.every[0],count:P.copper?4:(P.maxAll||3),rain:!!P.rainWash,cu:0.6};UI.tab="trattamenti";window.scrollTo(0,0)},
+  vReg:function(b){UI.regVig=b.getAttribute("data-v")==="1"},
+  vRegCopy:function(){var rows=regRows(),t=["Data;Appezzamento;Ettari;Coltura;Prodotto;Rame kg/ha;Carenza fino al"].concat(rows.map(function(r){return [r.d,r.p.name,num(area(r.p.pts)/1e4,2),Object.keys(cropsIn(r.p)).map(function(c){return CROPS[c].n}).join(", "),PRODUCTS[r.pl.prod].n,PRODUCTS[r.pl.prod].copper?num(+r.pl.cu||0,2):"",r.car].join(";")})).join("\n");
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){toast(rows.length+" righe copiate")},function(){toast("Copia non riuscita in questa vista")});else toast("Copia non disponibile qui");return false},
+  vmAdd:function(){var br=parseFloat($("#vmBrix").value),ac=parseFloat($("#vmAc").value),ph=parseFloat($("#vmPh").value);if(!isFinite(br)){toast("Inserisci almeno i °Brix");return false}S.samples=S.samples||[];S.samples.push({id:uid(),plot:UI.vmSel,date:$("#vmDate").value||iso(today()),brix:br,ac:isFinite(ac)?ac:null,ph:isFinite(ph)?ph:null});save();toast("Campione aggiunto")},
+  vmDel:function(b,id){S.samples=S.samples.filter(function(x){return x.id!==id});save()},
+  tip:function(b){toast(b.getAttribute("data-t"));return false}
+};
+function readFileAsText(file,cb){var r=new FileReader();r.onload=function(){cb(String(r.result))};r.onerror=function(){toast("Non riesco a leggere il file")};r.readAsText(file)}
+function vineChange(t){
+  var id=t.id;if(!id)return false;
+  if(id==="vwT"||id==="vwRain"||id==="vwShoot"){S.vw[{vwT:"t",vwRain:"rain",vwShoot:"shoot"}[id]]=parseFloat(t.value)||0;save();render();return true}
+  if(id.indexOf("bp-")===0){S.botte.sel[id.slice(3)]=t.checked;save();render();return true}
+  if(id==="bProd"){S.botte.prod=t.value;save();render();return true}
+  if(id==="bDose"||id==="bWater"||id==="bTank"||id==="bTit"){S.botte[{bDose:"dose",bWater:"water",bTank:"tank",bTit:"tit"}[id]]=parseFloat(t.value)||0;save();render();return true}
+  if(id==="bUnit"){S.botte.unit=t.value;save();render();return true}
+  if(id==="vmSel"){UI.vmSel=t.value;render();return true}
+  if(id==="vfFile"||id==="vfFile2"){
+    var file=t.files&&t.files[0];if(!file)return true;readVForm();var form=UI.vedit;
+    readFileAsText(file,function(txt){
+      var polys;try{polys=parseGeoFile(txt,file.name)}catch(e){toast("File non leggibile: usa GPX, KML o GeoJSON");return}
+      if(!polys.length){toast("Nel file non ho trovato un perimetro");return}
+      if(id==="vfFile2"){var p=plotById(form.id),tmp=importPolys([polys[0]],form);if(tmp.length){p.pts=tmp[0].pts;S.plots=S.plots.filter(function(x){return x.id!==tmp[0].id});readVForm();VACT.vSave();delete VIEWS["vine-"+p.id];delete VIEWS.map;save();render();toast("Forma aggiornata: "+num(area(p.pts)/1e4,2)+" ha")}return}
+      var made=importPolys(polys,form);if(!made.length){toast("Perimetro troppo piccolo o non valido");return}
+      if(made.length===1&&form.name&&!/^Parcella \d+$/.test(form.name))made[0].name=form.name;
+      UI.vedit=null;UI.vsel=made[0].id;S.sel=made[0].id;delete VIEWS.map;save();render();
+      toast(made.length===1?"Parcella importata: "+num(area(made[0].pts)/1e4,2)+" ha":made.length+" parcelle importate");
+    });
+    return true;
+  }
+  return false;
+}
+
+function afterRender(){
+  if(UI.tab==="mappa"){drawMap();var s=$("#mapsvg");if(s)bindPan(s,"map",function(pt,e){mapTap(pt,e)})}
+  if(UI.tab==="impianto"){drawImp();var s2=$("#impsvg");if(s2)bindPan(s2,"imp-"+S.sel,impTap)}
+  if(UI.tab==="vigna"){drawVine();var s3=$("#vinesvg");if(s3)bindPan(s3,"vine-"+UI.vsel,vineTap)}
+}
+
+/* ---------- eventi ---------- */
+document.addEventListener("click",function(e){
+  var tab=e.target.closest("[data-tab]");if(tab){e.preventDefault();setTab(tab.getAttribute("data-tab"));return}
+  var b=e.target.closest("[data-act]");if(!b)return;var a=b.getAttribute("data-act"),id=b.getAttribute("data-id");
+  if(a!=="delPlot"&&a!=="clear"&&a!=="delPlan"&&a!=="reset"&&a!=="vDel")UI.confirm=null;
+  if(VACT[a]){if(VACT[a](b,id)!==false)render();return}
+  var fn={
+    zin:function(){zoom(b.getAttribute("data-k"),0.6)},zout:function(){zoom(b.getAttribute("data-k"),1.6)},
+    zfit:function(){delete VIEWS[b.getAttribute("data-k")]},
+    drawStart:function(){UI.draw={pts:[],closed:false,name:"Nuova area "+(S.plots.length+1),type:"campo"};var all=[];S.plots.forEach(function(p){all=all.concat(p.pts)});if(all.length){var bb=bbox(all);fitView("map",{x0:bb.x0,y0:bb.y0,x1:bb.x1+30,y1:bb.y1+20},6)}},
+    drawUndo:function(){UI.draw.pts.pop()},drawClose:function(){UI.draw.closed=true},drawCancel:function(){UI.draw=null},
+    drawSave:function(){var d=UI.draw,p={id:uid(),name:($("#dName").value||"Area").trim(),type:$("#dType").value,pts:d.pts,plants:[]};if(p.type==="vigna"){p.vine=vineDefaults(UI.pendingVine);UI.vsel=p.id;UI.tab="vigna";UI.vtab="parcelle"}UI.pendingVine=null;S.plots.push(p);S.sel=p.id;UI.draw=null;delete VIEWS.map;save();toast("Area salvata: "+m2(area(p.pts)))},
+    rectAdd:function(){var L=parseFloat($("#rL").value),W=parseFloat($("#rW").value);if(!(L>0&&W>0)){toast("Inserisci lunghezza e larghezza");return}var all=[];S.plots.forEach(function(p){all=all.concat(p.pts)});var bb=all.length?bbox(all):{x0:0,y1:-4};var p={id:uid(),name:"Nuova area "+(S.plots.length+1),type:$("#rT").value,pts:rect(bb.x0,bb.y1+4,L,W),plants:[]};if(p.type==="vigna")p.vine=vineDefaults();S.plots.push(p);S.sel=p.id;UI.draw=null;delete VIEWS.map;save();toast("Rettangolo "+L+" × "+W+" m creato")},
+    selPlot:function(){S.sel=id;save()},
+    goImp:function(){UI.tab="impianto"},
+    delPlot:function(){if(UI.confirm!=="plot"){UI.confirm="plot";return}S.plans=S.plans.filter(function(p){return p.plot!==S.sel});S.plots=S.plots.filter(function(p){return p.id!==S.sel});S.sel=S.plots[0]&&S.plots[0].id;UI.confirm=null;delete VIEWS.map;save()},
+    mode:function(){UI.mode=b.getAttribute("data-m")},
+    crop:function(){S.cropSel=b.getAttribute("data-c");UI.mode="pianta";save()},
+    fill:function(){var p=plotById(S.sel),n=fill(p,S.cropSel);save();toast(n?n.toLocaleString("it-IT")+" piante di "+CROPS[S.cropSel].n.toLowerCase()+" aggiunte":"Nessuno spazio libero per questa coltura")},
+    clear:function(){if(UI.confirm!=="clear"){UI.confirm="clear";return}plotById(S.sel).plants=[];UI.confirm=null;save()},
+    newPlan:function(){var P=PRODUCTS.rame;UI.planForm={prod:"rame",plot:S.sel||S.plots[0].id,start:iso(today()),every:P.every[0],count:3,rain:true,cu:0.6}},
+    planFrom:function(){var k=b.getAttribute("data-p"),P=PRODUCTS[k];UI.planForm={prod:k,plot:b.getAttribute("data-plot"),start:iso(today()),every:P.every[0],count:P.maxAll||3,rain:!!P.rainWash,cu:0.6};window.scrollTo(0,0)},
+    planCancel:function(){UI.planForm=null},
+    planSave:function(){readPlanForm();var f=UI.planForm;if(!(f.every>0&&f.count>0)){toast("Controlla intervallo e passaggi");return}S.plans.push({id:uid(),prod:f.prod,plot:f.plot,start:f.start,every:f.every,count:f.count,rain:f.rain,cu:f.cu,done:[]});UI.planForm=null;save();toast("Trattamento programmato")},
+    done:function(){var pl=S.plans.find(function(p){return p.id===id});pl.done.push(iso(today()));save();var c=carenzaFor(pl.prod,plotById(pl.plot)).days;toast(c?"Registrato. Non raccogliere fino a "+fmt(addDays(today(),c)):"Registrato")},
+    undo:function(){var pl=S.plans.find(function(p){return p.id===id});pl.done.pop();save()},
+    delPlan:function(){if(UI.confirm!==id){UI.confirm=id;return}S.plans=S.plans.filter(function(p){return p.id!==id});UI.confirm=null;save()},
+    copy:function(){var t=JSON.stringify(S);if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){toast("Dati copiati")},function(){toast("Copia non riuscita in questa vista")})}else toast("Copia non disponibile qui")},
+    reset:function(){if(UI.confirm!=="reset"){UI.confirm="reset";return}S=sample();VIEWS={};UI.confirm=null;save();toast("Dati di esempio ripristinati")}
+  }[a];
+  if(fn){fn();render()}
+});
+function readPlanForm(){var f=UI.planForm;if(!f)return;var g=function(i){var el=$(i);return el?el.value:null};f.prod=g("#fProd")||f.prod;f.plot=g("#fPlot")||f.plot;f.start=g("#fStart")||f.start;f.every=parseInt(g("#fEvery"),10);f.count=parseInt(g("#fCount"),10);if($("#fCu"))f.cu=parseFloat(g("#fCu"))||0;f.rain=$("#fRain").checked}
+document.addEventListener("change",function(e){
+  var t=e.target;
+  if(vineChange(t))return;
+  if(t.id==="impSel"){S.sel=t.value;save();render()}
+  else if(t.id==="pName"){plotById(S.sel).name=t.value.trim()||"Area";save();render()}
+  else if(t.id==="pType"){var pp=plotById(S.sel);pp.type=t.value;if(t.value==="vigna"){if(!pp.vine)pp.vine=vineDefaults();pp.plants=[]}else delete pp.vine;save();render()}
+  else if(t.id==="dName"){UI.draw.name=t.value}
+  else if(t.id==="dType"){UI.draw.type=t.value}
+  else if(["wT","wRh","wWet","wRain"].indexOf(t.id)>=0){var m={wT:"t",wRh:"rh",wWet:"wet",wRain:"rain"};S.weather[m[t.id]]=parseFloat(t.value)||0;save();render()}
+  else if(t.id==="fProd"){readPlanForm();var P=PRODUCTS[UI.planForm.prod];UI.planForm.every=P.every[0];UI.planForm.rain=!!P.rainWash;if(P.maxAll)UI.planForm.count=P.maxAll;render()}
+});
+
+/* ---------- ponte con la sincronizzazione cloud (js/sync.js) ---------- */
+var LOCALKEY=KEY,pendingRender=false;
+function safeRender(){
+  var a=document.activeElement;
+  if(a&&a.closest&&a.closest("#app")&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)){
+    if(!pendingRender){pendingRender=true;a.addEventListener("blur",function(){pendingRender=false;setTimeout(render,0)},{once:true})}
+    return;
+  }
+  render();
+}
+window.QO={
+  getState:function(){return S},
+  /* passa a un archivio locale separato (es. cache dell'azienda) o torna a quello del dispositivo */
+  useKey:function(k){KEY=k||LOCALKEY;VC={};VIEWS={};var prefs=S?{weather:S.weather,cropSel:S.cropSel,vw:S.vw,botte:S.botte}:{};
+    try{var r=localStorage.getItem(KEY);if(r){S=JSON.parse(r)}else if(KEY===LOCALKEY){S=sample()}else{S={plots:[],plans:[],samples:[],vineInit:true}}}catch(e){S=KEY===LOCALKEY?sample():{plots:[],plans:[],samples:[],vineInit:true}}
+    ["weather","cropSel","vw","botte"].forEach(function(f){if(S[f]==null&&prefs[f]!=null)S[f]=prefs[f]});
+    if(!S.weather)S.weather={t:14,rh:70,wet:0,rain:0};if(!S.vw)S.vw={t:12,rain:0,shoot:0};if(!S.botte)S.botte={sel:{},prod:"rame",dose:3,unit:"kg",water:500,tank:1000,tit:20};if(!S.cropSel)S.cropSel="lattuga";if(!S.samples)S.samples=[];
+    UI.vsel=null;UI.vedit=null;UI.planForm=null;UI.draw=null;render()},
+  /* dati arrivati dal cloud: sostituiscono parcelle, piani, campioni e segni */
+  applyRemote:function(d){S.plots=d.plots;S.plans=d.plans;S.samples=d.samples;S.geo=d.geo||S.geo||null;S.marksMeta=d.marksMeta||{};
+    if(S.sel&&!plotById(S.sel))S.sel=S.plots[0]&&S.plots[0].id;if(!S.sel&&S.plots[0])S.sel=S.plots[0].id;S.vineInit=true;saveLocal();safeRender()},
+  render:function(){safeRender()},
+  toast:function(t){toast(t)},
+  productName:function(k){return PRODUCTS[k]?PRODUCTS[k].n:k},
+  plotName:function(id){var p=plotById(id);return p?p.name:"appezzamento"}
+};
+
+load();render();
+})();
+</script>
+<script type="module" src="js/sync.js"></script>
+<script>
+if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
+</script>
+</body>
+</html>
