@@ -25,11 +25,35 @@ Ruoli:
 | File | Contenuto |
 |---|---|
 | `index.html` | L'app |
+| `js/mappa.js` | Mappa satellitare, posizione GPS, foto aeree importate |
 | `js/sync.js` | Account, aziende, inviti e sincronizzazione con Firebase |
 | `js/config.js` | Configurazione del progetto Firebase (da compilare) |
 | `firestore.rules` | Regole di sicurezza del database |
 | `sw.js` | Uso senza connessione |
 | `manifest.webmanifest`, `icons/` | Installazione sulla schermata Home |
+
+## Mappa satellitare e GPS
+
+- **Sfondo**: foto satellitare (Esri) o mappa stradale (OpenStreetMap), con il selettore in alto a destra. I riquadri già visti restano salvati per l'uso senza rete.
+- **Posizionare gli appezzamenti**: quelli disegnati a mano non hanno coordinate. Si posizionano una volta con "Posiziona sulla mappa", poi si corregge con le frecce. Le parcelle importate da file GPS sono già al loro posto.
+- **Dove sono**: punto blu con il cerchio di precisione. In vigna l'app indica parcella, filare e ceppo più probabili; si corregge con le frecce e si segna fallanza o sintomi.
+- **Registra perimetro**: si cammina lungo il confine e l'app crea l'area. Usa solo i punti con precisione entro 15 m.
+- **Precisione**: un telefono sbaglia in genere di 3-5 m. Per il singolo ceppo serve un ricevitore GNSS RTK: su Android si collega come "posizione fittizia" dalle opzioni sviluppatore, su iPhone con i ricevitori compatibili.
+- Il GPS funziona con l'app aperta e lo schermo acceso: l'app tiene lo schermo sveglio finché il GPS è attivo.
+
+## Foto aeree vostre
+
+Nella mappa, sezione **Le vostre foto aeree**:
+
+| Formato | Note |
+|---|---|
+| GeoTIFF (`.tif`) | Ortofoto da drone (DJI Terra, Pix4D, WebODM, Agisoft) o da geoportale. Il sistema di coordinate si legge dal file. |
+| KMZ | Sovrapposizioni create con Google Earth. |
+| JPG o PNG + file di georeferenziazione | Selezionare insieme l'immagine e il file con lo stesso nome (`.jgw`, `.pgw`, `.wld`) e scegliere il sistema di coordinate. |
+
+Sistemi di coordinate gestiti: WGS84/UTM 32N e 33N, ETRS89/UTM, RDN2008/UTM, Monte Mario Gauss-Boaga, latitudine e longitudine, Web Mercator.
+
+Le immagini vengono ridotte a 4096 pixel sul lato lungo (2560 sui telefoni con poca memoria) e restano sul dispositivo. Per un'azienda grande conviene esportare dal software del drone un file per zona.
 
 ## 1. Pubblicare l'app con GitHub Pages
 
