@@ -18,6 +18,11 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <style>
 .lmapslot{position:relative}
+.lmap{zoom:var(--mapz,1)}
+.zlv{display:flex;gap:4px}
+.zlv button{flex:1;min-height:44px;padding:0 4px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-family:var(--f-display);font-weight:700;cursor:pointer}
+.zlv button[aria-pressed="true"]{border:2px solid var(--accent);background:var(--ok-bg)}
+#zoomPop{margin-top:8px}
 .lmap{position:relative;z-index:0;isolation:isolate;height:58vh;min-height:320px;max-height:640px;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:var(--surface-2)}
 .lmap .leaflet-control-attribution{font-size:10px}
 .lmap .qo-label{background:transparent;border:0;box-shadow:none;color:#fff;font:700 13px var(--f-display);text-shadow:0 0 3px #000,0 0 6px #000;padding:0}
@@ -138,7 +143,7 @@ a{color:var(--serra)}
 
 </head>
 <body>
-<div class="syncbar" id="syncbar"></div>
+<div class="syncbar"><div class="row" style="flex-wrap:nowrap;justify-content:space-between;gap:8px"><span id="syncbar" style="min-width:0;display:flex"></span><button type="button" id="zoomBtn" data-act="zoomOpen" aria-label="Dimensione di testi e riquadri" aria-haspopup="true" style="font-family:var(--f-display);font-weight:800;flex-shrink:0">Aa</button></div><div id="zoomPop" hidden></div></div>
 <div class="app" id="app"></div>
 <div class="sheet" id="acct" hidden></div>
 <nav class="nav" aria-label="Sezioni"><div id="nav"></div></nav>
@@ -424,7 +429,7 @@ function svgPt(svg,e){var p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;var
 function bindPan(svg,key,onTap){
   var st=null;
   svg.addEventListener("pointerdown",function(e){st={x:e.clientX,y:e.clientY,v:vbOf(key),moved:false,t:e.target};try{svg.setPointerCapture(e.pointerId)}catch(_){}});
-  svg.addEventListener("pointermove",function(e){if(!st)return;var dx=e.clientX-st.x,dy=e.clientY-st.y;if(!st.moved&&Math.hypot(dx,dy)<7)return;st.moved=true;var k=st.v.w/svg.clientWidth;VIEWS[key]={x:st.v.x-dx*k,y:st.v.y-dy*k,w:st.v.w,h:st.v.h,aspect:st.v.h/st.v.w};var v=VIEWS[key];svg.setAttribute("viewBox",v.x+" "+v.y+" "+v.w+" "+v.h)});
+  svg.addEventListener("pointermove",function(e){if(!st)return;var dx=e.clientX-st.x,dy=e.clientY-st.y;if(!st.moved&&Math.hypot(dx,dy)<7)return;st.moved=true;var k=st.v.w/(svg.getBoundingClientRect().width||svg.clientWidth);VIEWS[key]={x:st.v.x-dx*k,y:st.v.y-dy*k,w:st.v.w,h:st.v.h,aspect:st.v.h/st.v.w};var v=VIEWS[key];svg.setAttribute("viewBox",v.x+" "+v.y+" "+v.w+" "+v.h)});
   svg.addEventListener("pointerup",function(e){if(st&&!st.moved)onTap(svgPt(svg,e),{target:st.t});st=null});
   svg.addEventListener("pointercancel",function(){st=null});
 }
@@ -448,7 +453,7 @@ function renderNav(){
   var due=S.plans.filter(function(p){var d=nextDue(p);return d&&d<=today()}).length;
   $("#nav").innerHTML=TABS.map(function(t){return '<a href="#" data-tab="'+t[0]+'"'+(UI.tab===t[0]?' aria-current="page"':'')+'>'+ICON[t[0]]+t[1]+(t[0]==="trattamenti"&&due?' <span class="badge b-warn">'+due+'</span>':'')+(t[0]==="magazzino"&&window.QOInv&&window.QOInv.alertsCount()?' <span class="badge b-bad">'+window.QOInv.alertsCount()+'</span>':'')+'</a>'}).join("");
 }
-function render(){mergeCustom();renderNav();var a=$("#app");a.innerHTML=({oggi:vOggi,mappa:vMappa,impianto:vImpianto,vigna:vVigna,trattamenti:vTratt,magazzino:function(){return window.QOInv?window.QOInv.view():'<div class="top"><h1>Magazzino</h1></div><div class="panel">Caricamento…</div>'},libreria:vLib})[UI.tab]();afterRender()}
+function render(){mergeCustom();renderNav();renderZoomPop();var a=$("#app");a.innerHTML=({oggi:vOggi,mappa:vMappa,impianto:vImpianto,vigna:vVigna,trattamenti:vTratt,magazzino:function(){return window.QOInv?window.QOInv.view():'<div class="top"><h1>Magazzino</h1></div><div class="panel">Caricamento…</div>'},libreria:vLib})[UI.tab]();afterRender()}
 
 var FILL={serra:"var(--serra-fill)",campo:"var(--campo-fill)",tunnel:"var(--tunnel-fill)",vigna:"var(--vigna-fill)"};
 var STROKE={serra:"var(--serra)",campo:"var(--accent)",tunnel:"var(--tunnel)",vigna:"var(--vigna)"};
@@ -680,6 +685,7 @@ function vOggi(){
   if(rec.length){h+='<h2 style="margin:16px 0 8px">Attività recenti</h2><div class="panel stack" style="gap:6px">'+rec.slice(0,5).map(function(a){return '<div class="small"><b>'+esc(a.da)+'</b> · '+esc(a.testo)+(a.quando&&a.quando.toDate?' <span class="muted">· '+a.quando.toDate().toLocaleString("it-IT",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})+'</span>':'')+'</div>'}).join("")+'</div>'}
   /* azioni rapide */
   h+='<h2 style="margin:16px 0 8px">Azioni rapide</h2><div class="grid2">'+[["mappa","Dove sono in vigna"],["trattamenti:nuovo","Programma trattamento"],["magazzino","Magazzino e acquisti"],["vigna:matur","Campionamento"],["vigna:botte","Calcolo botte"],["libreria","Libreria prodotti"]].map(function(x){return '<button class="btn" data-act="homeGo" data-v="'+x[0]+'">'+x[1]+'</button>'}).join("")+'</div>';
+  h+='<h2 style="margin:16px 0 8px">Dimensione</h2><div class="panel">'+zoomLevelsHtml()+'</div>';
   return h;
 }
 /* =================== VIGNA =================== */
@@ -960,6 +966,8 @@ document.addEventListener("click",function(e){
     delPlot:function(){if(UI.confirm!=="plot"){UI.confirm="plot";return}S.plans=S.plans.filter(function(p){return p.plot!==S.sel});S.plots=S.plots.filter(function(p){return p.id!==S.sel});S.sel=S.plots[0]&&S.plots[0].id;UI.confirm=null;delete VIEWS.map;save()},
     mode:function(){UI.mode=b.getAttribute("data-m")},
     homeAll:function(){UI.homeAll=!UI.homeAll},
+    zoomOpen:function(){UI.zoomOpen=!UI.zoomOpen},
+    zoomSet:function(){var z=parseFloat(b.getAttribute("data-v"));try{localStorage.setItem(ZKEY,String(z))}catch(e){}applyZoom(z)},
     homeGo:function(){var v=(b.getAttribute("data-v")||"").split(":"),tab=v[0],sub=v[1];UI.tab=tab;UI.confirm=null;
       if(tab==="vigna"){UI.vtab=sub||"parcelle";UI.vedit=null;if(id)UI.vsel=id}
       if(tab==="trattamenti"&&sub==="nuovo"){var P=PRODUCTS.rame;UI.planForm={prod:"rame",plot:S.sel||(S.plots[0]&&S.plots[0].id),start:iso(today()),every:P.every[0],count:3,rain:true,cu:0.6}}
@@ -1029,6 +1037,15 @@ window.QO={
   typeName:TYPEN,stroke:STROKE,fill:FILL,
   setMark:function(plotId,key,state){var p=plotById(plotId);if(!p||!p.vine)return;if(state)p.vine.marks[key]=state;else delete p.vine.marks[key];save();render()}
 };
+
+/* ---------- dimensione di testi e riquadri (solo su questo dispositivo) ---------- */
+var ZLEVELS=[[0.8,"Molto piccolo"],[0.9,"Piccolo"],[1,"Normale"],[1.1,"Grande"],[1.2,"Molto grande"]],ZKEY="qo-zoom";
+function getZoom(){try{var z=parseFloat(localStorage.getItem(ZKEY));return ZLEVELS.some(function(l){return l[0]===z})?z:1}catch(e){return 1}}
+function applyZoom(z){var r=document.documentElement;if(window.CSS&&CSS.supports&&CSS.supports("zoom","1")){r.style.zoom=z===1?"":String(z);r.style.setProperty("--mapz",String(Math.round(1/z*10000)/10000))}else{r.style.fontSize=(z*100)+"%"}
+  setTimeout(function(){window.dispatchEvent(new Event("resize"))},50)}
+function zoomLevelsHtml(){var z=getZoom();return '<div class="zlv" role="group" aria-label="Dimensione">'+ZLEVELS.map(function(l,i){return '<button type="button" data-act="zoomSet" data-v="'+l[0]+'" aria-pressed="'+(l[0]===z)+'" aria-label="'+l[1]+'" style="font-size:'+(11+i*2.5)+'px">A</button>'}).join("")+'</div><div class="row small muted" style="justify-content:space-between;margin-top:4px"><span>'+ZLEVELS.filter(function(l){return l[0]===z})[0][1]+' · '+Math.round(z*100)+'%</span><span>solo su questo dispositivo</span></div>'}
+function renderZoomPop(){var p=$("#zoomPop");if(!p)return;p.hidden=!UI.zoomOpen;p.innerHTML=UI.zoomOpen?'<div class="panel stack" style="gap:6px;border:1px solid var(--line)"><b class="small">Dimensione di testi e riquadri</b>'+zoomLevelsHtml()+'</div>':''}
+applyZoom(getZoom());
 
 load();render();
 })();

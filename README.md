@@ -118,6 +118,10 @@ Il piano gratuito (Spark) basta per un'azienda con pochi utenti.
 3. **Invita un collega** con la sua email e il ruolo.
 4. Il collega apre il link dell'app, crea l'account **con la stessa email**, la conferma e trova l'invito nella barra in alto.
 
+## Dimensione di testi e riquadri
+
+Il pulsante **Aa** in alto (e la sezione Dimensione in fondo a Oggi) regola tutto insieme su 5 livelli con passi uguali: 80%, 90%, 100%, 110%, 120%. La scelta vale solo sul dispositivo. La mappa satellitare resta a dimensione reale, così le immagini restano nitide e i tocchi precisi.
+
 ## Installare sul telefono
 
 - **Android (Chrome)**: menu ⋮ → **Installa app** oppure **Aggiungi a schermata Home**.
