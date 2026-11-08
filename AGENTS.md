@@ -48,13 +48,14 @@ Pubblicata su GitHub Pages: https://edoardobassani.github.io/Quaderno-orto-vigna
 | `js/colture.js` | Colture scritte a mano e correzioni a quelle pronte (`S.customCrops`, sincronizzate in `impostazioni/colture`). `mergeCrops()` in `index.html` ricostruisce `CROPS` da `CROPS_BASE` a ogni `render()`; le nuove hanno chiave `u_<id>`. Espone `window.QOColt`; pulsanti con `data-co`. |
 | `js/alberi.js` | Alberi: chiome sulla pianta dell'Orto, schedina (`pl.t = {v, port, anno, notes, zone}`), schermata "Zona dell'albero" (`QO.ui.zedit`: cerchio, a punti, camminando, "Sono qui" con media pesata di 20 s) e alberi singoli (appezzamento `frutteto` con `single: true`, sincronizzato). Espone `window.QOAlb`; pulsanti con `data-al`. |
 | `js/macchine.js` | Macchine per i trattamenti: `S.macchine = [{id, n, c, tank, water, plots: {idParcella: true}}]` (sincronizzate in `impostazioni/macchine`), assegnazione delle terrazze sulla mappa (`UI.macSel`), controllo di terrazze senza macchina o su più macchine, calcolo botte per macchina (`UI.botMac`, ricordata in localStorage `qo-botmac`) con cambi "solo per oggi" in `S.botte.oggi = {d, mac, t}`. `vBotte()` usa `QOMac.inCalc/water/tank`. Espone `window.QOMac`; pulsanti con `data-mc`. |
+| `js/lavori.js` | Lavori in vigna (Vigna → Lavori): `S.lavori = [{id, tipo, d, plots: [{p, f0?, f1?}], dove?, chi?, ore?, att?, prof?, note?}]` sincronizzati nella raccolta `lavori` (un documento per lavoro), tipi pronti (`BASE`, gruppo `pianta` o `terreno`) più `S.lavTipi` (in `impostazioni/lavtipi`, chiave `u_<id>`). Stagione dal 1° novembre; `prog()` calcola quanto è fatta una terrazza (filari fatti per i lavori sulla pianta, metà per filari pari o dispari sul terreno). Mappa colorata, modulo `UI.lavForm` (le terrazze si scelgono toccando la mappa), riquadro nella scheda della parcella, sezione in Oggi. Espone `window.QOLav`; pulsanti con `data-lv`. |
 | `js/forma.js` | Schermata "Modifica forma" di una parcella già creata (vertici da trascinare, "+" sui lati, togli punto, sposta tutta, annulla). Stato in `QO.ui.fedit`; quando è aperta, `render()` mostra solo questa schermata. Espone `window.QOForma`. Attributo dei pulsanti: `data-fo`. |
 | `js/filari.js` | Schermata "Direzione dei filari": filare guida disegnato col dito, camminato col GPS o ruotato; anteprima dal vivo. Stato in `QO.ui.gedit`. Espone `window.QOFil`. Attributo dei pulsanti: `data-fi`. |
 | `sw.js` | Service worker (vedi "Pubblicare una modifica"). |
 | `firestore.rules` | Regole di sicurezza del database. Si incollano a mano nella console Firebase. |
 | `README.md` | Guida per gli utenti (in italiano). Quando aggiungi una funzione visibile, aggiungi o aggiorna la sezione corrispondente. |
 
-Ordine degli script in fondo a `index.html`: sync.js (modulo), Leaflet, mappa.js, inventario.js, meteo.js, prodotti.js, voce.js, terreni.js, sfondo.js, filari.js, forma.js, bancali.js, colture.js, alberi.js, macchine.js, poi la registrazione del service worker. I moduli leggono e scrivono solo attraverso `window.QO`, e alla fine chiamano `Q.render()`.
+Ordine degli script in fondo a `index.html`: sync.js (modulo), Leaflet, mappa.js, inventario.js, meteo.js, prodotti.js, voce.js, terreni.js, sfondo.js, filari.js, forma.js, bancali.js, colture.js, alberi.js, macchine.js, lavori.js, poi la registrazione del service worker. I moduli leggono e scrivono solo attraverso `window.QO`, e alla fine chiamano `Q.render()`.
 
 ### Librerie da CDN (versioni fissate)
 
@@ -99,7 +100,8 @@ Se aggiungi un host nuovo, aggiungilo anche a `LIB_HOSTS` in `sw.js`.
   - `data-bk`: bancali dell'orto;
   - `data-co`: colture scritte a mano;
   - `data-al`: alberi;
-  - `data-mc`: macchine e calcolo botte.
+  - `data-mc`: macchine e calcolo botte;
+  - `data-lv`: lavori in vigna.
 - **Salvataggio**: `save()` salva in locale e, se c'è il cloud, chiama `QOSync.push(S)`. Dopo `save()` serve un `render()` esplicito.
 - **Testi dinamici**: passa sempre per `esc()` prima di metterli nell'HTML.
 - **Conferme**: niente `alert` o `confirm`. Per le azioni distruttive si usa il "tocca ancora", con `UI.confirm` o variabili simili. Per gli esiti si usa `toast()`.

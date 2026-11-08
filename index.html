@@ -584,6 +584,7 @@ function navEditor(){
   if(UI.gedit&&window.QOFil)return function(){window.QOFil.close()};
   if(UI.cropForm)return function(){UI.cropForm=null};
   if(UI.macForm)return function(){UI.macForm=null};
+  if(UI.lavForm)return function(){UI.lavForm=null};
   if(UI.macSel)return function(){UI.macSel=null};
   if(UI.bedForm)return function(){UI.bedForm=null};
   if(UI.vedit)return function(){UI.vedit=null};
@@ -888,6 +889,7 @@ function vOggi(){
   var rec=window.QOSync&&window.QOSync.recent?window.QOSync.recent():[];
   if(rec.length){h+='<h2 style="margin:16px 0 8px">Attività recenti</h2><div class="panel stack" style="gap:6px">'+rec.slice(0,5).map(function(a){return '<div class="small"><b>'+esc(a.da)+'</b> · '+esc(a.testo)+(a.quando&&a.quando.toDate?' <span class="muted">· '+a.quando.toDate().toLocaleString("it-IT",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})+'</span>':'')+'</div>'}).join("")+'</div>'}
   /* azioni rapide */
+  if(window.QOLav)h+=window.QOLav.oggiHtml();
   h+='<h2 style="margin:16px 0 8px">Azioni rapide</h2><div class="grid2">'+[["mappa","Dove sono in vigna"],["trattamenti:nuovo","Programma trattamento"],["magazzino","Magazzino e acquisti"],["vigna:matur","Campionamento"],["vigna:botte","Calcolo botte"],["libreria","Libreria prodotti"]].map(function(x){return '<button class="btn" data-act="homeGo" data-v="'+x[0]+'">'+x[1]+'</button>'}).join("")+'</div>';
   return h;
 }
@@ -1146,9 +1148,9 @@ function vVigna(){
   var vs=vignes().filter(inTer);if(!plotById(UI.vsel)||!plotById(UI.vsel).vine||!inTer(plotById(UI.vsel)))UI.vsel=vs[0]&&vs[0].id;
   var tot=vs.reduce(function(s,p){return s+area(p.pts)},0),ce=vs.reduce(function(s,p){return s+vineGeo(p).ceppi},0),tr=terById(terSel());
   var h='<div class="top"><div><div class="eyebrow">'+(tr?esc(tr.name)+' · ':'')+vs.length+' parcelle · '+num(tot/1e4,2)+' ha · '+ce.toLocaleString("it-IT")+' ceppi</div><h1>Vigna</h1></div>'+(UI.vtab==="parcelle"&&!UI.vedit?'<button class="btn primary" data-act="vNew">Nuova parcella</button>':'')+'</div>';
-  h+='<div class="seg" role="group" aria-label="Sezioni della vigna">'+[["parcelle","Parcelle"],["difesa","Difesa"],["botte","Botte"],["registro","Registro"],["matur","Maturazione"]].map(function(x){return '<button data-act="vTab" data-v="'+x[0]+'" aria-pressed="'+(UI.vtab===x[0])+'">'+x[1]+'</button>'}).join("")+'</div>';
+  h+='<div class="seg" role="group" aria-label="Sezioni della vigna">'+[["parcelle","Parcelle"],["lavori","Lavori"],["difesa","Difesa"],["botte","Botte"],["registro","Registro"],["matur","Maturazione"]].map(function(x){return '<button data-act="vTab" data-v="'+x[0]+'" aria-pressed="'+(UI.vtab===x[0])+'">'+x[1]+'</button>'}).join("")+'</div>';
   if(UI.vtab==="parcelle"||UI.vtab==="botte")h+=terBar();
-  return h+({parcelle:vParcelle,difesa:vDifesa,botte:vBotte,registro:vRegistro,matur:vMatur})[UI.vtab]();
+  return h+({parcelle:vParcelle,lavori:function(){return window.QOLav?window.QOLav.view():''},difesa:vDifesa,botte:vBotte,registro:vRegistro,matur:vMatur})[UI.vtab]();
 }
 function vFormHtml(){
   var f0=UI.vedit,pp0=f0.id&&plotById(f0.id);f0.autoN=null;f0.autoOri=null;f0.realInter=null;
@@ -1210,6 +1212,7 @@ function vParcelle(){
   h+='<div class="panel stack" style="margin-top:10px"><div class="row" style="justify-content:space-between"><h3>Fenologia</h3><span class="badge b-n">'+(sg?STN[sg.st][1]+' · BBCH '+STN[sg.st][2]:'non registrata')+'</span></div><div class="grid2"><label class="f">Fase<select id="vStage">'+STAGES.map(function(s){return '<option value="'+s[0]+'">'+s[1]+' (BBCH '+s[2]+')</option>'}).join("")+'</select></label><label class="f">Data<input id="vStageDate" type="date" value="'+iso(today())+'"></label></div><div><button class="btn sm" data-act="vPhenAdd">Registra fase</button></div>';
   if(V.phen.length)h+='<div class="small muted">'+V.phen.slice().reverse().slice(0,6).map(function(x){return STN[x.st][1]+' '+fmt(parse(x.date))}).join(" · ")+'</div>';
   h+='</div>';
+  if(window.QOLav)h+=window.QOLav.plotHtml(p);
   if(window.QOVoice)h+=window.QOVoice.notesHtml(p.id,10);
   return h;
 }
@@ -1382,7 +1385,7 @@ function afterRender(){
   if(UI.tab==="mappa"){if(window.QOMap&&window.QOMap.ok()&&$("#lmapSlot"))window.QOMap.mount($("#lmapSlot"));else{drawMap();var s=$("#mapsvg");if(s)bindPan(s,"map",function(pt,e){mapTap(pt,e)})}}
   if(UI.tab==="impianto"){drawImp();var s2=$("#impsvg");if(s2&&ortoSel())bindPan(s2,"imp-"+S.osel,impTap)}
   if(UI.tab==="vigna"&&UI.gedit&&window.QOFil)window.QOFil.after();
-  if(UI.tab==="vigna"){drawVine();var s3=$("#vinesvg");if(s3)bindPan(s3,"vine-"+UI.vsel,vineTap);drawVmap();var s4=$("#vmapsvg");if(s4)bindPan(s4,vmapKey(),vmapTap);if(UI.vtab==="botte"&&window.QOMac)window.QOMac.after()}
+  if(UI.tab==="vigna"){drawVine();var s3=$("#vinesvg");if(s3)bindPan(s3,"vine-"+UI.vsel,vineTap);drawVmap();var s4=$("#vmapsvg");if(s4)bindPan(s4,vmapKey(),vmapTap);if(UI.vtab==="botte"&&window.QOMac)window.QOMac.after();if(UI.vtab==="lavori"&&window.QOLav)window.QOLav.after()}
   if(UI.scrollDet){UI.scrollDet=false;var dt=$("#vdet");if(dt)setTimeout(function(){dt.scrollIntoView({behavior:"smooth",block:"start"})},30)}
 }
 
@@ -1463,7 +1466,7 @@ window.QO={
     if(!S.weather)S.weather={t:14,rh:70,wet:0,rain:0};if(!S.vw)S.vw={t:12,rain:0,shoot:0};if(!S.botte)S.botte={sel:{},prod:"rame",dose:3,unit:"kg",water:500,tank:1000,tit:20};if(!S.cropSel)S.cropSel="lattuga";if(!S.samples)S.samples=[];if(!S.inv)S.inv={items:[],moves:[]};
     UI.vsel=null;UI.vedit=null;UI.gedit=null;UI.fedit=null;UI.zedit=null;UI.cropForm=null;UI.treeSel=null;UI.planForm=null;UI.draw=null;render()},
   /* dati arrivati dal cloud: sostituiscono parcelle, piani, campioni e segni */
-  applyRemote:function(d){if(d.customProducts)S.customProducts=d.customProducts;if(d.customCrops)S.customCrops=d.customCrops;if(d.macchine)S.macchine=d.macchine;if(d.notes)S.notes=d.notes;if(d.terreni)S.terreni=d.terreni;S.plots=d.plots;S.plans=d.plans;S.samples=d.samples;S.inv=d.inv||{items:[],moves:[]};if(d.meteo){var man=S.meteo&&S.meteo.manual;S.meteo=d.meteo;S.meteo.manual=!!man}S.geo=d.geo||S.geo||null;S.marksMeta=d.marksMeta||{};
+  applyRemote:function(d){if(d.customProducts)S.customProducts=d.customProducts;if(d.customCrops)S.customCrops=d.customCrops;if(d.macchine)S.macchine=d.macchine;if(d.lavori)S.lavori=d.lavori;if(d.lavTipi)S.lavTipi=d.lavTipi;if(d.notes)S.notes=d.notes;if(d.terreni)S.terreni=d.terreni;S.plots=d.plots;S.plans=d.plans;S.samples=d.samples;S.inv=d.inv||{items:[],moves:[]};if(d.meteo){var man=S.meteo&&S.meteo.manual;S.meteo=d.meteo;S.meteo.manual=!!man}S.geo=d.geo||S.geo||null;S.marksMeta=d.marksMeta||{};
     if(S.sel&&!plotById(S.sel))S.sel=S.plots[0]&&S.plots[0].id;if(!S.sel&&S.plots[0])S.sel=S.plots[0].id;S.vineInit=true;var had=stripSamples(S);saveLocal();safeRender();if(had)setTimeout(save,300)},
   render:function(){safeRender()},
   saveLocal:function(){saveLocal()},
@@ -1510,6 +1513,7 @@ load();var navY=navRestore();render();if(navY)setTimeout(function(){window.scrol
 <script src="js/colture.js"></script>
 <script src="js/alberi.js"></script>
 <script src="js/macchine.js"></script>
+<script src="js/lavori.js"></script>
 <script>
 if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
 </script>

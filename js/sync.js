@@ -4,7 +4,7 @@
 import { firebaseConfig } from "./config.js";
 
 const FB = "https://www.gstatic.com/firebasejs/10.12.2/";
-const COLS = ["parcelle", "piani", "campioni", "segni", "impostazioni", "articoli", "movimenti", "meteo", "prodotti", "note"];
+const COLS = ["parcelle", "piani", "campioni", "segni", "impostazioni", "articoli", "movimenti", "meteo", "prodotti", "note", "lavori"];
 const ROLES = { titolare: "Titolare", collaboratore: "Collaboratore", lettura: "Sola lettura" };
 const AKEY = "qo-azienda";
 const META = ["modificato", "modificatoDa"];
@@ -177,10 +177,12 @@ function decode() {
   const notes = Object.entries(remote.note || {}).map(([id, d]) => strip(id, d)).sort((a, b) => (a.at < b.at ? -1 : 1));
   const col = (remote.impostazioni || {}).colture, customCrops = col && col.list ? col.list : null;
   const mac = (remote.impostazioni || {}).macchine, macchine = mac && mac.list ? mac.list : null;
-  return { plots, plans, samples, geo: g && g.geo ? g.geo : null, marksMeta, inv, meteo, customProducts, customCrops, macchine, notes, terreni };
+  const lavori = Object.entries(remote.lavori || {}).map(([id, d]) => strip(id, d)).sort((a, b) => (a.d < b.d ? -1 : 1));
+  const lt = (remote.impostazioni || {}).lavtipi, lavTipi = lt && lt.list ? lt.list : null;
+  return { plots, plans, samples, geo: g && g.geo ? g.geo : null, marksMeta, inv, meteo, customProducts, customCrops, macchine, lavori, lavTipi, notes, terreni };
 }
 function encode(S) {
-  const out = { parcelle: {}, piani: {}, campioni: {}, segni: {}, impostazioni: {}, articoli: {}, movimenti: {}, meteo: {}, prodotti: {}, note: {} };
+  const out = { parcelle: {}, piani: {}, campioni: {}, segni: {}, impostazioni: {}, articoli: {}, movimenti: {}, meteo: {}, prodotti: {}, note: {}, lavori: {} };
   (S.plots || []).forEach((p) => {
     const d = { name: p.name, type: p.type, pts: p.pts.map((q) => ({ x: q[0], y: q[1] })), plants: p.plants || [] };
     if (p.ter) d.ter = p.ter;
@@ -195,6 +197,9 @@ function encode(S) {
   (S.plans || []).forEach((pl) => { const d = Object.assign({}, pl); delete d.id; out.piani[pl.id] = clean(d); });
   (S.samples || []).forEach((s) => { const d = Object.assign({}, s); delete d.id; out.campioni[s.id] = clean(d); });
   (S.notes || []).forEach((n) => { const d = Object.assign({}, n); delete d.id; out.note[n.id] = clean(d); });
+  /* lavori in vigna (potatura, lavorazioni del terreno…), uno per documento, e i tipi scritti a mano */
+  (S.lavori || []).forEach((r) => { const d = Object.assign({}, r); delete d.id; out.lavori[r.id] = clean(d); });
+  out.impostazioni.lavtipi = clean({ list: S.lavTipi || {} });
   out.impostazioni.geo = { geo: S.geo ? clean(S.geo) : null };
   /* colture scritte a mano e correzioni a quelle pronte */
   out.impostazioni.colture = clean({ list: S.customCrops || {} });
@@ -222,7 +227,7 @@ function applyAll() {
   if (uploadPending) {
     const d = uploadPending; uploadPending = null;
     baseline = encode({ plots: [], plans: [], samples: [], geo: null, inv: { items: [], moves: [] } });
-    QO().applyRemote({ plots: d.plots || [], plans: d.plans || [], samples: d.samples || [], geo: d.geo || null, marksMeta: {}, inv: d.inv || { items: [], moves: [] }, notes: d.notes || [], terreni: d.terreni || [], customCrops: d.customCrops || null, macchine: d.macchine || null });
+    QO().applyRemote({ plots: d.plots || [], plans: d.plans || [], samples: d.samples || [], geo: d.geo || null, marksMeta: {}, inv: d.inv || { items: [], moves: [] }, notes: d.notes || [], terreni: d.terreni || [], customCrops: d.customCrops || null, macchine: d.macchine || null, lavori: d.lavori || null, lavTipi: d.lavTipi || null });
     doPush(QO().getState(), true);
     return;
   }
@@ -392,7 +397,7 @@ async function act(a, id) {
       case "create": {
         const nome = val("saAz"); if (!nome) { msg = "Dai un nome all'azienda."; break; }
         const up = document.getElementById("saUp").checked, st = QO().getState();
-        const copy = up ? clean({ plots: st.plots, plans: st.plans, samples: st.samples || [], geo: st.geo || null, inv: st.inv || { items: [], moves: [] }, notes: st.notes || [], terreni: st.terreni || [], customCrops: st.customCrops || {}, macchine: st.macchine || [] }) : null;
+        const copy = up ? clean({ plots: st.plots, plans: st.plans, samples: st.samples || [], geo: st.geo || null, inv: st.inv || { items: [], moves: [] }, notes: st.notes || [], terreni: st.terreni || [], customCrops: st.customCrops || {}, macchine: st.macchine || [], lavori: st.lavori || [], lavTipi: st.lavTipi || {} }) : null;
         const ref = await F.addDoc(F.collection(db, "aziende"), { nome, membri: { [user.uid]: "titolare" }, membriInfo: { [user.uid]: { nome: myName(), email: user.email || "" } }, creata: F.serverTimestamp() });
         enter({ id: ref.id, data: { nome, membri: { [user.uid]: "titolare" }, membriInfo: { [user.uid]: { nome: myName(), email: user.email || "" } } } }, copy);
         msg = "Azienda creata" + (up ? ": sto caricando i dati del dispositivo." : "."); break;

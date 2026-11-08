@@ -161,6 +161,19 @@ In Vigna → Parcelle, sopra l'elenco, *Ordina*:
 
 Con più terreni (e nessun terreno scelto) l'elenco resta diviso prima per terreno. La scelta resta ricordata sul telefono. Lo stesso ordine per numero vale in tutti gli elenchi (Oggi, Botte, Orto…).
 
+## Lavori in vigna (potatura e lavorazioni del terreno)
+
+In **Vigna → Lavori**:
+- **Mostra sulla mappa**: scegli un lavoro (potatura, rovescio, ripuntatura…) e le terrazze si colorano: **verde** fatta, **verde chiaro** a metà, **grigio** da fare, per la stagione in corso (da novembre a ottobre). Sopra vedi quante terrazze ed ettari sono fatti e la percentuale.
+- **Segnare un lavoro**: tocca una terrazza sulla mappa (o *+ Segna lavoro*), poi tocca le altre terrazze dello stesso lavoro; scegli il lavoro e la data e salva. *Tutte* le sceglie tutte.
+  - Lavori sulla pianta (potatura, legatura, spollonatura, scacchiatura, cimatura, sfogliatura, vendemmia): con una sola terrazza puoi segnare **solo alcuni filari** (dal filare… al filare…); la terrazza risulta a metà e l'app ricorda quali filari sono fatti.
+  - Lavori sul terreno (rovescio, scalzatura, scasso, ripuntatura sotto fila, fresatura, erpicatura, trinciatura, sovescio): scegli **dove** (interfila tutti i filari, filari pari, filari dispari, sotto fila, tutta la superficie). Con i filari alterni l'app ti ricorda se l'ultima volta hai fatto i pari o i dispari.
+  - *Altri dati (facoltativi)*: chi, ore, attrezzo e trattore, profondità, nota.
+  - *+ Nuovo tipo di lavoro* (nell'elenco dei lavori) per aggiungere quelli che mancano.
+- **Registro dei lavori** della stagione, con il totale delle ore per lavoro, *Togli* per correggere e *Copia come tabella*.
+
+Nella scheda di ogni terrazza c'è il riquadro **Lavori** (stato della potatura e lavori delle ultime due stagioni, con *+ Segna lavoro*), e in **Oggi** l'avanzamento dei lavori della stagione: toccandolo apri la mappa di quel lavoro. I lavori si condividono con i colleghi tramite il cloud.
+
 ## Macchine e calcolo della botte
 
 In **Vigna → Botte**, riquadro **Macchine**:
