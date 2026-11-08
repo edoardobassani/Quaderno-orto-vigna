@@ -105,7 +105,7 @@
     beds(p).forEach(function (b, i) {
       var c = C[b.crop], pts = P(b), on = sb && sb.id === b.id, lp = Q.labelPt ? Q.labelPt(pts) : pts[0];
       out += '<polygon points="' + pts.map(function (q) { return q.join(","); }).join(" ") + '" fill="' + (c ? c.c : 'var(--surface)') + '" fill-opacity="' + (c ? 0.28 : 0.45) + '" stroke="' + (on ? '#E8590C' : (c ? c.c : 'var(--ink-2)')) + '" stroke-width="' + (on ? 3 : 1.5) + '" vector-effect="non-scaling-stroke" pointer-events="none"/>';
-      out += '<text x="' + lp[0] + '" y="' + lp[1] + '" font-size="' + v.w / 26 + '" text-anchor="middle" font-weight="700" fill="var(--ink)" stroke="var(--surface)" stroke-width="3" paint-order="stroke" vector-effect="non-scaling-stroke" pointer-events="none">' + (i + 1) + '</text>';
+      out += '<text x="' + lp[0] + '" y="' + lp[1] + '" font-size="' + v.w / 26 + '" text-anchor="middle" font-weight="700" fill="var(--ink)" stroke="var(--surface)" stroke-width="' + v.w / 120 + '" paint-order="stroke" pointer-events="none">' + (i + 1) + '</text>';
     });
     return out;
   }

@@ -153,6 +153,16 @@ L'orto è separato dalla vigna: nella sezione Orto compaiono solo serre, tunnel 
 
 **Bancali**: sotto la pianta dell'appezzamento, *Dividi in bancali* lo divide in strisce parallele al lato lungo (o di traverso): scegli quanto è largo ogni bancale e il passaggio fra un bancale e l'altro; il numero lo calcola l'app (quanti ne stanno) oppure lo scrivi tu, e quello che avanza resta metà per lato. Ogni bancale si può poi allargare o stringere da solo (campo *Larghezza* del bancale scelto), purché non tocchi quelli vicini. Tocca un bancale (nell'elenco, o sulla pianta con *Scegli bancale*) e scegli la sua coltura: *Riempi* lo pianta a file lungo il bancale alla distanza giusta (una fila sola al centro se il bancale è più stretto della distanza tra le file), *Svuota bancale* toglie le sue piante. La coltura del bancale è anche quella che si pianta a mano con *Pianta*. *Rifai i bancali* li ricalcola tenendo nomi e colture, *Togli i bancali* li elimina (le piante restano).
 
+### Colture scritte da te e alberi
+
+- **+ Nuova coltura** (in fondo all'elenco delle colture): nome, ortaggio o albero, distanze, famiglia, giorni alla raccolta (per gli alberi il periodo di raccolta) e colore. Le tue colture hanno l'etichetta *tua*, si modificano o si eliminano (solo se nessuna pianta o bancale le usa) e si condividono con i colleghi.
+- **Correggi distanze**: per le colture già pronte puoi cambiare distanze e giorni alla raccolta; *Torna ai valori di partenza* annulla la correzione.
+- **Alberi già pronti**: limone, arancio, mandarino, fico, melo, pero, pesco, albicocco, ciliegio, susino, olivo, cachi, melograno, noce, nocciolo, mandorlo, kiwi, con distanze d'impianto tipiche.
+- **Frutteto**: nuovo tipo di appezzamento (nella Mappa, insieme a serra, tunnel e pieno campo). Con un albero scelto, *Pianta* mette un albero dove tocchi; *Riempi lo spazio libero a file* fa un frutteto regolare. Ogni albero ha la sua **chioma** sulla pianta.
+- **Schedina dell'albero**: tocca un albero (*Scegli albero*, o con un albero scelto in *Pianta*): varietà, portinnesto, anno d'impianto, periodo di raccolta, misura della chioma e note con la data. *Togli albero* lo elimina (in *Rimuovi* gli alberi non si tolgono per sbaglio).
+- **Zona dell'albero** (dalla schedina): sopra la foto satellitare o la vostra foto aerea disegni la chioma come **cerchio** (trascini il pallino sul bordo o usi − e +), **a punti** (tocchi il contorno) o **camminando** intorno alla chioma col GPS. Il tronco si trascina, oppure con **Sono qui** il telefono fa la media delle posizioni per 20 secondi e mette il tronco dove sei.
+- **Albero singolo**: per un albero da solo (il limone vicino a casa) tocca *+ Albero singolo* nell'Orto, scegli l'albero, mettilo sulla foto o con *Sono qui* e disegna la chioma. Diventa un piccolo frutteto che segue la chioma, nel gruppo *Alberi singoli* dell'elenco.
+
 ## Comandi vocali e note
 
 Il microfono in alto a destra, accanto ad **Aa**, apre il pannello vocale. Parli, l'app mostra cosa ha sentito e cosa farà, e salva solo quando tocchi **Conferma** (con **Correggi** sistemi la frase).

@@ -45,13 +45,15 @@ Pubblicata su GitHub Pages: https://edoardobassani.github.io/Quaderno-orto-vigna
 | `js/terreni.js` | Terreni, confini, import guidato di confine e terrazze, riepilogo in Oggi. Espone `window.QOTer`. |
 | `js/sfondo.js` | Sfondo fotografico per Direzione e Forma: riquadri Esri World Imagery o foto aeree dell'archivio IndexedDB `qo-foto` (le stesse della Mappa), messi nella SVG in metri locali con `S.geo`. `paint(g, view, kk)` rifà le immagini solo quando cambia il gruppo di riquadri. Scelta e trasparenza in localStorage (`qo-sfondo`, `qo-sfondo-op`). Espone `window.QOSfondo`; pulsanti con `data-sf`. |
 | `js/bancali.js` | Bancali dentro un appezzamento dell'orto: `p.beds = [{id, name, crop, pts: [{x, y}]}]` (punti come oggetti per Firestore; sincronizzati in `parcelle`), divisione in strisce di larghezza scelta (`st: {deg, a, b}` ricorda la striscia, così la larghezza di un bancale si cambia dal centro con `setWidth`), coltura per bancale, riempimento a file lungo il bancale. Espone `window.QOBanc`; pulsanti con `data-bk`. |
+| `js/colture.js` | Colture scritte a mano e correzioni a quelle pronte (`S.customCrops`, sincronizzate in `impostazioni/colture`). `mergeCrops()` in `index.html` ricostruisce `CROPS` da `CROPS_BASE` a ogni `render()`; le nuove hanno chiave `u_<id>`. Espone `window.QOColt`; pulsanti con `data-co`. |
+| `js/alberi.js` | Alberi: chiome sulla pianta dell'Orto, schedina (`pl.t = {v, port, anno, notes, zone}`), schermata "Zona dell'albero" (`QO.ui.zedit`: cerchio, a punti, camminando, "Sono qui" con media pesata di 20 s) e alberi singoli (appezzamento `frutteto` con `single: true`, sincronizzato). Espone `window.QOAlb`; pulsanti con `data-al`. |
 | `js/forma.js` | Schermata "Modifica forma" di una parcella già creata (vertici da trascinare, "+" sui lati, togli punto, sposta tutta, annulla). Stato in `QO.ui.fedit`; quando è aperta, `render()` mostra solo questa schermata. Espone `window.QOForma`. Attributo dei pulsanti: `data-fo`. |
 | `js/filari.js` | Schermata "Direzione dei filari": filare guida disegnato col dito, camminato col GPS o ruotato; anteprima dal vivo. Stato in `QO.ui.gedit`. Espone `window.QOFil`. Attributo dei pulsanti: `data-fi`. |
 | `sw.js` | Service worker (vedi "Pubblicare una modifica"). |
 | `firestore.rules` | Regole di sicurezza del database. Si incollano a mano nella console Firebase. |
 | `README.md` | Guida per gli utenti (in italiano). Quando aggiungi una funzione visibile, aggiungi o aggiorna la sezione corrispondente. |
 
-Ordine degli script in fondo a `index.html`: sync.js (modulo), Leaflet, mappa.js, inventario.js, meteo.js, prodotti.js, voce.js, terreni.js, sfondo.js, filari.js, forma.js, bancali.js, poi la registrazione del service worker. I moduli leggono e scrivono solo attraverso `window.QO`, e alla fine chiamano `Q.render()`.
+Ordine degli script in fondo a `index.html`: sync.js (modulo), Leaflet, mappa.js, inventario.js, meteo.js, prodotti.js, voce.js, terreni.js, sfondo.js, filari.js, forma.js, bancali.js, colture.js, alberi.js, poi la registrazione del service worker. I moduli leggono e scrivono solo attraverso `window.QO`, e alla fine chiamano `Q.render()`.
 
 ### Librerie da CDN (versioni fissate)
 
@@ -73,7 +75,7 @@ Se aggiungi un host nuovo, aggiungilo anche a `LIB_HOSTS` in `sw.js`.
   - `S.plots`: appezzamenti, ciascuno `{id, name, type: serra|tunnel|campo|vigna, pts:[[x,y]...], plants, vine?, ter?}`.
   - `S.plans`: trattamenti programmati, `{id, prod, plot, start, every, count, rain, cu, done:[date]}`.
   - Altri campi: `S.samples`, `S.notes`, `S.terreni`, `S.inv`, `S.meteo`, `S.customProducts`, `S.botte`, `S.geo`.
-- **Orto e vigna sono separati**: la sezione Orto usa solo gli appezzamenti non di vigna (`orti()`) e una scelta propria, `S.osel` (`ortoSel()`). `S.sel` resta la scelta della Mappa; la Vigna usa `UI.vsel`. Non mostrare parcelle di vigna nell'Orto.
+- **Orto e vigna sono separati**: la sezione Orto usa solo gli appezzamenti non di vigna (`orti()`) e una scelta propria, `S.osel` (`ortoSel()`). `S.sel` resta la scelta della Mappa; la Vigna usa `UI.vsel`. Non mostrare parcelle di vigna nell'Orto. Le colture con `tree: true` (alberi, `isTree()`) si disegnano e si toccano tramite `js/alberi.js`; il tipo di appezzamento `frutteto` sta nell'Orto. Nelle etichette SVG con contorno (`paint-order="stroke"`) lo spessore va dato in metri (es. `3 * kk`), non fisso: con le viste piccole un valore fisso copre tutto.
 - **Coordinate**: le forme sono in **metri locali** (x verso est, y verso sud). `S.geo = {lat0, lon0, ox, oy}` le collega a latitudine e longitudine:
   - `x = ox + (lon - lon0) * cos(lat0) * 111320`
   - `y = oy + (lat0 - lat) * 110574`
@@ -89,7 +91,9 @@ Se aggiungi un host nuovo, aggiungilo anche a `LIB_HOSTS` in `sw.js`.
   - `data-fi`: direzione dei filari;
   - `data-fo`: modifica della forma;
   - `data-sf`: sfondo fotografico;
-  - `data-bk`: bancali dell'orto.
+  - `data-bk`: bancali dell'orto;
+  - `data-co`: colture scritte a mano;
+  - `data-al`: alberi.
 - **Salvataggio**: `save()` salva in locale e, se c'è il cloud, chiama `QOSync.push(S)`. Dopo `save()` serve un `render()` esplicito.
 - **Testi dinamici**: passa sempre per `esc()` prima di metterli nell'HTML.
 - **Conferme**: niente `alert` o `confirm`. Per le azioni distruttive si usa il "tocca ancora", con `UI.confirm` o variabili simili. Per gli esiti si usa `toast()`.

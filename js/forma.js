@@ -77,7 +77,7 @@
       e.pts.forEach(function (q, i) { out += '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="' + (i === e.sel ? 11 : dn ? 4 : 8) * kk + '" fill="' + (i === e.sel ? ORANGE : 'var(--surface)') + '" stroke="' + ORANGE + '" stroke-width="' + (dn && i !== e.sel ? 2 : 3) + '" vector-effect="non-scaling-stroke"/>'; });
       var fh = document.getElementById("fhint"); if (fh) fh.textContent = dn ? "I punti sono fitti: ingrandisci con due dita per spostarli comodamente." : "Trascina i punti per spostarli. Trascina o tocca un “+” per aggiungere un punto. Tocca un punto per sceglierlo.";
     }
-    out += '<text x="' + (view.x + 12 * kk) + '" y="' + (view.y + 22 * kk) + '" font-size="' + 14 * kk + '" font-weight="700" fill="var(--ink)" stroke="var(--surface)" stroke-width="3" paint-order="stroke" pointer-events="none">N ↑</text>';
+    out += '<text x="' + (view.x + 12 * kk) + '" y="' + (view.y + 22 * kk) + '" font-size="' + 14 * kk + '" font-weight="700" fill="var(--ink)" stroke="var(--surface)" stroke-width="' + 3 * kk + '" paint-order="stroke" pointer-events="none">N ↑</text>';
     if (!s.querySelector("#fbg")) s.innerHTML = '<g id="fbg"></g><g id="ffg"></g>';
     if (SF) SF.paint(s.querySelector("#fbg"), view, kk); else s.querySelector("#fbg").innerHTML = "";
     s.querySelector("#ffg").innerHTML = out;

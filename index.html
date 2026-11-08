@@ -198,8 +198,36 @@ var CROPS={
   fagiolino:{n:"Fagiolino nano",row:10,btw:50,fam:"fabacee",days:65,c:"#A3B83A"},
   basilico:{n:"Basilico",row:25,btw:30,fam:"lamiacee",days:60,c:"#5AAE6B"},
   fragola:{n:"Fragola",row:30,btw:40,fam:"rosacee",days:120,c:"#E0425F"},
-  vite:{n:"Vite",row:90,btw:250,fam:"vitacee",days:0,c:"#7B2D4F",vine:true}
+  vite:{n:"Vite",row:90,btw:250,fam:"vitacee",days:0,c:"#7B2D4F",vine:true},
+  /* alberi: distanze d'impianto tipiche in cm (sulla fila e tra le file), periodo di raccolta indicativo */
+  limone:{n:"Limone",row:400,btw:400,fam:"rutacee",days:0,c:"#E3B81C",tree:true,harv:"tutto l'anno, soprattutto in inverno"},
+  arancio:{n:"Arancio",row:450,btw:450,fam:"rutacee",days:0,c:"#EF9F27",tree:true,harv:"dicembre–aprile"},
+  mandarino:{n:"Mandarino",row:400,btw:400,fam:"rutacee",days:0,c:"#D85A30",tree:true,harv:"novembre–febbraio"},
+  fico:{n:"Fico",row:500,btw:500,fam:"moracee",days:0,c:"#534AB7",tree:true,harv:"agosto–settembre (fioroni a giugno)"},
+  melo:{n:"Melo",row:350,btw:400,fam:"rosacee",days:0,c:"#E24B4A",tree:true,harv:"agosto–ottobre"},
+  pero:{n:"Pero",row:350,btw:400,fam:"rosacee",days:0,c:"#9AA34A",tree:true,harv:"luglio–ottobre"},
+  pesco:{n:"Pesco",row:450,btw:500,fam:"rosacee",days:0,c:"#F0997B",tree:true,harv:"giugno–settembre"},
+  albicocco:{n:"Albicocco",row:500,btw:500,fam:"rosacee",days:0,c:"#FAC775",tree:true,harv:"giugno–luglio"},
+  ciliegio:{n:"Ciliegio",row:600,btw:600,fam:"rosacee",days:0,c:"#A32D2D",tree:true,harv:"maggio–giugno"},
+  susino:{n:"Susino",row:450,btw:500,fam:"rosacee",days:0,c:"#7F77DD",tree:true,harv:"luglio–settembre"},
+  olivo:{n:"Olivo",row:600,btw:600,fam:"oleacee",days:0,c:"#639922",tree:true,harv:"ottobre–dicembre"},
+  cachi:{n:"Cachi",row:500,btw:500,fam:"ebenacee",days:0,c:"#E8590C",tree:true,harv:"ottobre–novembre"},
+  melograno:{n:"Melograno",row:400,btw:400,fam:"litracee",days:0,c:"#C2185B",tree:true,harv:"settembre–novembre"},
+  noce:{n:"Noce",row:900,btw:900,fam:"juglandacee",days:0,c:"#8C6A3F",tree:true,harv:"settembre–ottobre"},
+  nocciolo:{n:"Nocciolo",row:450,btw:500,fam:"betulacee",days:0,c:"#B5835A",tree:true,harv:"agosto–settembre"},
+  mandorlo:{n:"Mandorlo",row:600,btw:600,fam:"rosacee",days:0,c:"#D4B3A0",tree:true,harv:"agosto–settembre"},
+  kiwi:{n:"Kiwi",row:300,btw:450,fam:"actinidiacee",days:0,c:"#6E8B3D",tree:true,harv:"ottobre–novembre"}
 };
+/* colture scritte da Edo e correzioni a quelle già pronte (S.customCrops): CROPS si ricostruisce da CROPS_BASE.
+   Chiave "u_<id>" per quelle nuove; per quelle pronte si salvano solo le correzioni (base:true). */
+var CROPS_BASE=JSON.parse(JSON.stringify(CROPS));
+function mergeCrops(){
+  Object.keys(CROPS).forEach(function(k){delete CROPS[k]});Object.keys(CROPS_BASE).forEach(function(k){CROPS[k]=Object.assign({},CROPS_BASE[k])});
+  var C=S&&S.customCrops||{};
+  Object.keys(C).forEach(function(id){var c=C[id];if(c.base){if(CROPS[id])["row","btw","days","harv","c"].forEach(function(f){if(c[f]!=null&&c[f]!=="")CROPS[id][f]=f==="row"||f==="btw"||f==="days"?+c[f]:c[f]});CROPS[id]&&(CROPS[id].edited=true);return}
+    CROPS["u_"+id]={n:c.n||"Coltura",row:+c.row||30,btw:+c.btw||+c.row||30,fam:c.fam||"",days:+c.days||0,c:c.c||"#888780",tree:!!c.tree,harv:c.harv||"",custom:true,cid:id}});
+}
+function isTree(c){return !!(CROPS[c]&&CROPS[c].tree)}
 /* malattie e famiglie sensibili (semplificato) */
 var DIS={
   peronospora:{n:"Peronospora",fam:["solanacee","cucurbitacee","asteracee","amarillidacee","brassicacee","amarantacee","vitacee"]},
@@ -448,7 +476,7 @@ function bindPan(svg,key,onTap){
 
 /* ---------- stato UI ---------- */
 var UI={tab:"oggi",draw:null,form:null,mode:"pianta",confirm:null,planForm:null};
-function setTab(t){UI.tab=t;UI.confirm=null;if(window.QOForma)window.QOForma.close();render();window.scrollTo(0,0)}
+function setTab(t){UI.tab=t;UI.confirm=null;if(window.QOForma)window.QOForma.close();if(window.QOAlb)window.QOAlb.zoneClose();UI.cropForm=null;render();window.scrollTo(0,0)}
 
 /* ---------- render ---------- */
 var ICON={
@@ -467,11 +495,11 @@ function renderNav(){
   var due=S.plans.filter(function(p){var d=nextDue(p);return d&&d<=today()}).length;
   $("#nav").innerHTML=TABS.map(function(t){return '<a href="#" data-tab="'+t[0]+'" aria-label="'+TABN[t[0]]+'" title="'+TABN[t[0]]+'"'+(UI.tab===t[0]?' aria-current="page"':'')+'>'+ICON[t[0]]+(t[0]==="trattamenti"&&due?' <span class="badge b-warn">'+due+'</span>':'')+(t[0]==="magazzino"&&window.QOInv&&window.QOInv.alertsCount()?' <span class="badge b-bad">'+window.QOInv.alertsCount()+'</span>':'')+'</a>'}).join("");
 }
-function render(){mergeCustom();renderNav();renderZoomPop();var a=$("#app");if(UI.fedit&&window.QOForma){a.innerHTML=window.QOForma.html();afterRender();return}a.innerHTML=({oggi:vOggi,mappa:vMappa,impianto:vImpianto,vigna:vVigna,trattamenti:vTratt,magazzino:function(){return window.QOInv?window.QOInv.view():'<div class="top"><h1>Magazzino</h1></div><div class="panel">Caricamento…</div>'},libreria:vLib})[UI.tab]();afterRender()}
+function render(){mergeCustom();mergeCrops();renderNav();renderZoomPop();var a=$("#app");if(UI.fedit&&window.QOForma){a.innerHTML=window.QOForma.html();afterRender();return}if(UI.zedit&&window.QOAlb){a.innerHTML=window.QOAlb.zoneHtml();afterRender();return}a.innerHTML=({oggi:vOggi,mappa:vMappa,impianto:vImpianto,vigna:vVigna,trattamenti:vTratt,magazzino:function(){return window.QOInv?window.QOInv.view():'<div class="top"><h1>Magazzino</h1></div><div class="panel">Caricamento…</div>'},libreria:vLib})[UI.tab]();afterRender()}
 
-var FILL={serra:"var(--serra-fill)",campo:"var(--campo-fill)",tunnel:"var(--tunnel-fill)",vigna:"var(--vigna-fill)"};
-var STROKE={serra:"var(--serra)",campo:"var(--accent)",tunnel:"var(--tunnel)",vigna:"var(--vigna)"};
-var TYPEN={serra:"Serra",campo:"Pieno campo",tunnel:"Tunnel",vigna:"Vigna"};
+var FILL={serra:"var(--serra-fill)",campo:"var(--campo-fill)",tunnel:"var(--tunnel-fill)",vigna:"var(--vigna-fill)",frutteto:"var(--campo-fill)"};
+var STROKE={serra:"var(--serra)",campo:"var(--accent)",tunnel:"var(--tunnel)",vigna:"var(--vigna)",frutteto:"var(--warn)"};
+var TYPEN={serra:"Serra",campo:"Pieno campo",tunnel:"Tunnel",vigna:"Vigna",frutteto:"Frutteto"};
 
 function vMappa(){
   var VP=S.plots.filter(inTer),tr=terById(terSel()),all=[];VP.forEach(function(p){all=all.concat(p.pts)});if(tr&&tr.pts)all=all.concat(tr.pts);
@@ -491,8 +519,8 @@ function vMappa(){
     var d=UI.draw,ar=d.pts.length>2?area(d.pts):0;
     h+='<div class="panel stack" style="margin-top:12px"><div class="row" style="justify-content:space-between"><h2>Nuova area</h2><span class="mono">'+(ar?m2(ar):d.pts.length+' punti')+'</span></div>';
     if(!d.closed)h+='<div class="row"><button class="btn sm" data-act="drawUndo">Annulla punto</button><button class="btn sm" data-act="drawClose"'+(d.pts.length<3?' disabled':'')+'>Chiudi forma</button><button class="btn sm danger" data-act="drawCancel">Esci</button></div>';
-    else h+='<div class="grid2"><label class="f">Nome<input id="dName" value="'+esc(d.name)+'"></label><label class="f">Tipo<select id="dType">'+["serra","tunnel","campo","vigna","confine"].map(function(t){return '<option value="'+t+'"'+(d.type===t?' selected':'')+'>'+(t==="confine"?'Confine di un terreno':TYPEN[t])+'</option>'}).join("")+'</select></label><label class="f" style="grid-column:1/-1">Terreno<select id="dTer"><option value="">'+(terreni().length?'Nessuno':'—')+'</option>'+terreni().map(function(t){return '<option value="'+t.id+'"'+((d.ter||terSel())===t.id?' selected':'')+'>'+esc(t.name)+'</option>'}).join("")+'<option value="new">+ Nuovo terreno (col nome sopra)</option></select></label></div><div class="row"><button class="btn primary" data-act="drawSave">Salva area</button><button class="btn" data-act="drawCancel">Annulla</button></div>';
-    h+='<details><summary>Oppure inserisci le misure di un rettangolo</summary><div class="grid3" style="margin-top:8px"><label class="f">Lungh. (m)<input id="rL" type="number" inputmode="decimal" value="20"></label><label class="f">Largh. (m)<input id="rW" type="number" inputmode="decimal" value="8"></label><label class="f">Tipo<select id="rT"><option value="serra">Serra</option><option value="tunnel">Tunnel</option><option value="campo">Pieno campo</option><option value="vigna">Vigna</option></select></label></div><button class="btn sm" style="margin-top:8px" data-act="rectAdd">Crea rettangolo</button></details></div>';
+    else h+='<div class="grid2"><label class="f">Nome<input id="dName" value="'+esc(d.name)+'"></label><label class="f">Tipo<select id="dType">'+["serra","tunnel","campo","frutteto","vigna","confine"].map(function(t){return '<option value="'+t+'"'+(d.type===t?' selected':'')+'>'+(t==="confine"?'Confine di un terreno':TYPEN[t])+'</option>'}).join("")+'</select></label><label class="f" style="grid-column:1/-1">Terreno<select id="dTer"><option value="">'+(terreni().length?'Nessuno':'—')+'</option>'+terreni().map(function(t){return '<option value="'+t.id+'"'+((d.ter||terSel())===t.id?' selected':'')+'>'+esc(t.name)+'</option>'}).join("")+'<option value="new">+ Nuovo terreno (col nome sopra)</option></select></label></div><div class="row"><button class="btn primary" data-act="drawSave">Salva area</button><button class="btn" data-act="drawCancel">Annulla</button></div>';
+    h+='<details><summary>Oppure inserisci le misure di un rettangolo</summary><div class="grid3" style="margin-top:8px"><label class="f">Lungh. (m)<input id="rL" type="number" inputmode="decimal" value="20"></label><label class="f">Largh. (m)<input id="rW" type="number" inputmode="decimal" value="8"></label><label class="f">Tipo<select id="rT"><option value="serra">Serra</option><option value="tunnel">Tunnel</option><option value="campo">Pieno campo</option><option value="frutteto">Frutteto</option><option value="vigna">Vigna</option></select></label></div><button class="btn sm" style="margin-top:8px" data-act="rectAdd">Crea rettangolo</button></details></div>';
     return h;
   }
   h+='<div class="row" style="justify-content:space-between;margin:16px 0 8px"><h2>Appezzamenti</h2><span class="muted small">tocca sulla mappa o nell\'elenco</span></div><div class="list">';
@@ -503,7 +531,7 @@ function vMappa(){
   h+='</div>';
   if(sel){
     h+='<div class="panel stack" style="margin-top:12px"><div class="row" style="justify-content:space-between"><h2>'+esc(sel.name)+'</h2><span class="badge b-n">'+TYPEN[sel.type]+'</span></div>';
-    h+='<div class="grid2"><label class="f">Nome<input id="pName" value="'+esc(sel.name)+'"></label><label class="f">Tipo<select id="pType">'+["serra","tunnel","campo","vigna"].map(function(t){return '<option value="'+t+'"'+(sel.type===t?' selected':'')+'>'+TYPEN[t]+'</option>'}).join("")+'</select></label></div>';
+    h+='<div class="grid2"><label class="f">Nome<input id="pName" value="'+esc(sel.name)+'"></label><label class="f">Tipo<select id="pType">'+["serra","tunnel","campo","frutteto","vigna"].map(function(t){return '<option value="'+t+'"'+(sel.type===t?' selected':'')+'>'+TYPEN[t]+'</option>'}).join("")+'</select></label></div>';
     h+='<div class="row"><button class="btn primary" data-act="goImp">'+(sel.type==="vigna"?'Apri in Vigna':'Apri nell\'orto')+'</button><button class="btn" data-act="fOpen" data-id="'+sel.id+'">Modifica forma</button><button class="btn danger" data-act="delPlot">'+(UI.confirm==="plot"?'Tocca ancora per eliminare':'Elimina')+'</button></div></div>';
   }
   return h;
@@ -547,21 +575,28 @@ function mapTap(pt,e){
 function orti(){return S.plots.filter(function(p){return p.type!=="vigna"})}
 function ortoSel(){var p=plotById(S.osel);if(!p||p.type==="vigna"){var l=orti().slice().sort(natCmp);p=l[0]||null;S.osel=p?p.id:null}return p}
 function vImpianto(){
+  if(UI.cropForm&&window.QOColt)return window.QOColt.html();
   var p=ortoSel();if(!CROPS[S.cropSel]||CROPS[S.cropSel].vine)S.cropSel=Object.keys(CROPS).filter(function(c){return !CROPS[c].vine})[0];
-  if(!p)return '<div class="top"><h1>Orto</h1></div><div class="panel stack"><h2>Nessun appezzamento dell\'orto</h2><span>Aggiungi una serra, un tunnel o un campo nella Mappa: disegnalo, importalo da file GPS o inserisci le misure di un rettangolo.</span><div><button class="btn primary" data-tab="mappa">Vai alla Mappa</button></div></div>';
-  var sel='<select id="impSel" aria-label="Appezzamento dell\'orto" style="width:auto;max-width:48%">'+orti().slice().sort(natCmp).map(function(q){return '<option value="'+q.id+'"'+(q.id===p.id?' selected':'')+'>'+esc(q.name)+'</option>'}).join("")+'</select>';
+  if(!p)return '<div class="top"><h1>Orto</h1></div><div class="panel stack"><h2>Nessun appezzamento dell\'orto</h2><span>Aggiungi una serra, un tunnel, un campo o un frutteto nella Mappa: disegnalo, importalo da file GPS o inserisci le misure di un rettangolo. Per un albero da solo usa «Albero singolo».</span><div class="row"><button class="btn primary" data-tab="mappa">Vai alla Mappa</button><button class="btn" data-al="single">+ Albero singolo</button></div></div>';
+  var opt=function(q){return '<option value="'+q.id+'"'+(q.id===p.id?' selected':'')+'>'+esc(q.name)+'</option>'},ol=orti().slice().sort(natCmp),sing=ol.filter(function(q){return q.single});
+  var sel='<select id="impSel" aria-label="Appezzamento dell\'orto" style="width:auto;max-width:48%">'+(sing.length?'<optgroup label="Appezzamenti">'+ol.filter(function(q){return !q.single}).map(opt).join("")+'</optgroup><optgroup label="Alberi singoli">'+sing.map(opt).join("")+'</optgroup>':ol.map(opt).join(""))+'</select>';
   if(!VIEWS["imp-"+p.id]){fitView("imp-"+p.id,bbox(p.pts),1);VIEWS["imp-"+p.id].aspect=Math.min(1.1,Math.max(0.45,(bbox(p.pts).y1-bbox(p.pts).y0+2)/(bbox(p.pts).x1-bbox(p.pts).x0+2)))}
   var cs=cropsIn(p),cf=conflicts(p),hb=harvestBlock(p);
-  var h='<div class="top"><div><div class="eyebrow">'+TYPEN[p.type]+' · '+m2(area(p.pts))+' · '+p.plants.length.toLocaleString("it-IT")+' piante</div><h1>Orto</h1></div>'+sel+'</div>';
-  h+='<div class="row" style="margin-bottom:8px">'+[["pianta","Pianta"],["rimuovi","Rimuovi"],["sposta",window.QOBanc&&window.QOBanc.has(p)?"Scegli bancale":"Solo vista"]].map(function(m){return '<button class="btn sm" data-act="mode" data-m="'+m[0]+'" aria-pressed="'+(UI.mode===m[0])+'">'+m[1]+'</button>'}).join("")+'</div>';
+  var h='<div class="top"><div><div class="eyebrow">'+(p.single?'Albero singolo':TYPEN[p.type])+' · '+m2(area(p.pts))+' · '+p.plants.length.toLocaleString("it-IT")+' piante</div><h1>Orto</h1></div>'+sel+'</div>';
+  h+='<div class="row" style="margin:-4px 0 10px"><button class="btn sm" data-al="single">+ Albero singolo</button></div>';
+  h+='<div class="row" style="margin-bottom:8px">'+[["pianta","Pianta"],["rimuovi","Rimuovi"],["sposta",window.QOBanc&&window.QOBanc.has(p)?"Scegli":p.plants.some(function(q){return isTree(q.c)})?"Scegli albero":"Solo vista"]].map(function(m){return '<button class="btn sm" data-act="mode" data-m="'+m[0]+'" aria-pressed="'+(UI.mode===m[0])+'">'+m[1]+'</button>'}).join("")+'</div>';
   h+='<div class="mapwrap"><svg id="impsvg" role="img" aria-label="Pianta dell\'appezzamento con le piante"></svg><div class="zoom"><button data-act="zin" data-k="imp-'+p.id+'" aria-label="Ingrandisci">+</button><button data-act="zout" data-k="imp-'+p.id+'" aria-label="Rimpicciolisci">−</button><button data-act="zfit" data-k="imp-'+p.id+'" aria-label="Adatta" style="font-size:13px">⤢</button></div></div>';
   if(cf.bad.size){var mn=1e9;cf.bad.forEach(function(i){mn=Math.min(mn,cf.minD[i])});h+='<div class="panel risk" style="margin-top:10px;background:var(--warn-bg);color:var(--warn)"><b>!</b><div><b>'+cf.bad.size+' piante troppo vicine</b><br><span class="small">Distanza minima trovata '+Math.round(mn*100)+' cm. Usa "Rimuovi" e ripianta.</span></div></div>'}
   if(hb)h+='<div class="panel risk" style="margin-top:10px;background:var(--bad-bg);color:var(--bad)"><b>⏱</b><div><b>Non raccogliere fino a '+fmt(hb.end)+'</b><br><span class="small">Tempo di carenza di '+PRODUCTS[hb.prod].n+'.</span></div></div>';
-  if(window.QOBanc)h+=window.QOBanc.html(p);
+  if(window.QOAlb)h+=window.QOAlb.cardHtml(p);
+  if(window.QOBanc&&!p.single)h+=window.QOBanc.html(p);
   var hasB=window.QOBanc&&window.QOBanc.has(p);
-  if(!hasB)h+='<h2 style="margin:16px 0 8px">Coltura da piantare</h2><div class="row">'+Object.keys(CROPS).filter(function(c){return !CROPS[c].vine}).map(function(c){return '<button class="chip" data-act="crop" data-c="'+c+'" aria-pressed="'+(S.cropSel===c)+'"><span class="dot" style="background:'+CROPS[c].c+'"></span>'+CROPS[c].n+'</button>'}).join("")+'</div>';
-  var C=CROPS[S.cropSel];
-  h+='<div class="panel stack" style="margin-top:12px"><div class="row" style="justify-content:space-between"><h3>'+C.n+'</h3><span class="muted small">'+C.fam+' · ~'+C.days+' gg alla raccolta</span></div><div class="grid2"><div><div class="muted small">Sulla fila</div><b class="mono">'+C.row+' cm</b></div><div><div class="muted small">Tra le file</div><b class="mono">'+C.btw+' cm</b></div></div><div class="row"><button class="btn primary" data-act="fill">Riempi lo spazio libero a file</button><button class="btn danger" data-act="clear">'+(UI.confirm==="clear"?'Tocca ancora':'Svuota')+'</button></div><span class="muted small">Distanze indicative per l\'orto, valide come punto di partenza.</span></div>';
+  var chip=function(c){return '<button class="chip" data-act="crop" data-c="'+c+'" aria-pressed="'+(S.cropSel===c)+'"><span class="dot" style="background:'+CROPS[c].c+'"></span>'+esc(CROPS[c].n)+(CROPS[c].custom?' <span class="badge b-n">tua</span>':'')+'</button>'};
+  var ck=Object.keys(CROPS).filter(function(c){return !CROPS[c].vine}),newC='<button class="chip" data-co="new" style="border-style:dashed">+ Nuova coltura</button>';
+  if(!hasB)h+='<h2 style="margin:16px 0 8px">Coltura da piantare</h2><div class="small muted" style="margin-bottom:6px">Ortaggi</div><div class="row">'+ck.filter(function(c){return !CROPS[c].tree}).map(chip).join("")+'</div><div class="small muted" style="margin:10px 0 6px">Alberi</div><div class="row">'+ck.filter(function(c){return CROPS[c].tree}).map(chip).join("")+newC+'</div>';
+  else h+='<div class="row" style="margin-top:10px"><span class="small muted">Alberi:</span>'+ck.filter(function(c){return CROPS[c].tree}).map(chip).join("")+newC+'</div>';
+  var C=CROPS[S.cropSel],dm=function(cm){return C.tree?num(cm/100,1)+' m':cm+' cm'};
+  h+='<div class="panel stack" style="margin-top:12px"><div class="row" style="justify-content:space-between"><h3>'+esc(C.n)+(C.custom?' <span class="badge b-n">tua</span>':C.edited?' <span class="badge b-n">corretta</span>':'')+'</h3><span class="muted small">'+esc(C.fam)+(C.tree?(C.harv?' · raccolta '+esc(C.harv):''):(C.days?' · ~'+C.days+' gg alla raccolta':''))+'</span></div><div class="grid2"><div><div class="muted small">'+(C.tree?'Distanza sulla fila':'Sulla fila')+'</div><b class="mono">'+dm(C.row)+'</b></div><div><div class="muted small">Tra le file</div><b class="mono">'+dm(C.btw)+'</b></div></div><div><button class="btn sm" data-co="edit" data-c="'+S.cropSel+'">'+(C.custom?'Modifica coltura':'Correggi distanze')+'</button></div>'+(C.tree?'<span class="small muted">Tocca la pianta per mettere un albero (con «Pianta»), oppure riempi a file per un frutteto regolare. Tocca un albero per aprire la sua schedina.</span>':'')+'<div class="row"><button class="btn primary" data-act="fill">Riempi lo spazio libero a file</button><button class="btn danger" data-act="clear">'+(UI.confirm==="clear"?'Tocca ancora':'Svuota')+'</button></div><span class="muted small">Distanze indicative per l\'orto, valide come punto di partenza.</span></div>';
   var keys=Object.keys(cs);
   if(keys.length){h+='<h2 style="margin:16px 0 8px">In questo appezzamento</h2><div class="list">'+keys.map(function(c){var m2c=cs[c]*CROPS[c].row*CROPS[c].btw/1e4;return '<div class="item" style="cursor:default"><span class="dot" style="background:'+CROPS[c].c+'"></span><span class="grow"><b>'+CROPS[c].n+'</b><br><span class="muted small">'+CROPS[c].fam+'</span></span><span class="mono">'+cs[c].toLocaleString("it-IT")+'</span><span class="muted small">~'+num(m2c,0)+' m²</span></div>'}).join("")+'</div>'}
   return h;
@@ -578,20 +613,26 @@ function drawImp(){
   var cf=conflicts(p),detail=v.w<25;
   p.plants.forEach(function(pl,i){
     if(pl.x<v.x-1||pl.x>v.x+v.w+1||pl.y<v.y-1||pl.y>v.y+v.h+1)return;
-    var C=CROPS[pl.c],r=C.row/200,bad=cf.bad.has(i);
+    var C=CROPS[pl.c];if(!C||C.tree)return;/* gli alberi li disegna js/alberi.js, con la chioma */
+    var r=C.row/200,bad=cf.bad.has(i);
     if(detail||bad)g+='<circle cx="'+pl.x+'" cy="'+pl.y+'" r="'+r+'" fill="'+(bad?'var(--warn)':C.c)+'" fill-opacity="'+(bad?0.35:0.18)+'" stroke="'+(bad?'var(--warn)':'var(--surface)')+'" stroke-width="'+(bad?2.5:1)+'" '+(bad?'':'stroke-dasharray="3 2" ')+'vector-effect="non-scaling-stroke" pointer-events="none"/>';
     g+='<circle cx="'+pl.x+'" cy="'+pl.y+'" r="'+Math.max(r*0.45,v.w/260)+'" fill="'+C.c+'" pointer-events="none"/>';
   });
+  if(window.QOAlb)g+=window.QOAlb.svg(p,v);
   var sb=step;g+='<g pointer-events="none"><rect x="'+(v.x+v.w*0.04)+'" y="'+(v.y+v.h*0.92)+'" width="'+sb+'" height="'+(v.h*0.012)+'" fill="var(--ink)"/><text x="'+(v.x+v.w*0.04)+'" y="'+(v.y+v.h*0.905)+'" font-size="'+v.w/30+'" font-family="IBM Plex Mono,monospace" fill="var(--ink)">'+sb+' m</text></g>';
   svg.innerHTML=g;
 }
 function impTap(pt){
-  var p=ortoSel();if(UI.mode==="sposta"){if(window.QOBanc)window.QOBanc.tap(p,pt);return}
-  if(UI.mode==="rimuovi"){var best=-1,bd=1e9;p.plants.forEach(function(pl,i){var d=Math.hypot(pl.x-pt[0],pl.y-pt[1]);if(d<bd){bd=d;best=i}});var v=vbOf("imp-"+p.id);if(best>=0&&bd<Math.max(0.3,v.w/25)){p.plants.splice(best,1);save();render()}return}
+  var p=ortoSel(),th=window.QOAlb?window.QOAlb.hit(p,pt):null;
+  /* un tocco su un albero apre la sua schedina (in «Scegli», o quando si stanno piantando alberi) */
+  if(th&&(UI.mode==="sposta"||(UI.mode==="pianta"&&isTree(S.cropSel)))){UI.treeSel=th.id;render();return}
+  if(UI.mode==="sposta"){if(window.QOBanc)window.QOBanc.tap(p,pt);return}
+  if(UI.mode==="rimuovi"){var best=-1,bd=1e9;p.plants.forEach(function(pl,i){if(isTree(pl.c))return;var d=Math.hypot(pl.x-pt[0],pl.y-pt[1]);if(d<bd){bd=d;best=i}});var v=vbOf("imp-"+p.id);if(best>=0&&bd<Math.max(0.3,v.w/25)){p.plants.splice(best,1);save();render()}else if(th)toast("Per togliere un albero aprilo e usa «Togli albero»");return}
   if(!pip(pt,p.pts)){toast("Tocca dentro l'appezzamento");return}
   var c=S.cropSel,x=Math.round(pt[0]*20)/20,y=Math.round(pt[1]*20)/20,close=null;
   p.plants.forEach(function(q){var d=Math.hypot(q.x-x,q.y-y),n=needed(c,q.c);if(d<n*0.9&&(!close||d<close.d))close={d:d,n:n}});
-  p.plants.push({id:uid(),c:c,x:x,y:y});save();render();
+  var np={id:uid(),c:c,x:x,y:y};if(isTree(c)){np.t={anno:today().getFullYear()};UI.treeSel=np.id}
+  p.plants.push(np);save();render();
   if(close)toast("Troppo vicina: "+Math.round(close.d*100)+" cm, minimo "+Math.round(close.n*100)+" cm");
 }
 
@@ -1191,6 +1232,7 @@ function vineChange(t){
 
 function afterRender(){
   if(UI.fedit&&window.QOForma){window.QOForma.after();return}
+  if(UI.zedit&&window.QOAlb){window.QOAlb.zoneAfter();return}
   if(UI.tab==="mappa"){if(window.QOMap&&window.QOMap.ok()&&$("#lmapSlot"))window.QOMap.mount($("#lmapSlot"));else{drawMap();var s=$("#mapsvg");if(s)bindPan(s,"map",function(pt,e){mapTap(pt,e)})}}
   if(UI.tab==="impianto"){drawImp();var s2=$("#impsvg");if(s2&&ortoSel())bindPan(s2,"imp-"+S.osel,impTap)}
   if(UI.tab==="vigna"&&UI.gedit&&window.QOFil)window.QOFil.after();
@@ -1273,9 +1315,9 @@ window.QO={
     try{var r=localStorage.getItem(KEY);if(r){S=JSON.parse(r)}else if(KEY===LOCALKEY){S=sample()}else{S={plots:[],plans:[],samples:[],vineInit:true}}}catch(e){S=KEY===LOCALKEY?sample():{plots:[],plans:[],samples:[],vineInit:true}}
     ["weather","cropSel","vw","botte"].forEach(function(f){if(S[f]==null&&prefs[f]!=null)S[f]=prefs[f]});
     if(!S.weather)S.weather={t:14,rh:70,wet:0,rain:0};if(!S.vw)S.vw={t:12,rain:0,shoot:0};if(!S.botte)S.botte={sel:{},prod:"rame",dose:3,unit:"kg",water:500,tank:1000,tit:20};if(!S.cropSel)S.cropSel="lattuga";if(!S.samples)S.samples=[];if(!S.inv)S.inv={items:[],moves:[]};
-    UI.vsel=null;UI.vedit=null;UI.gedit=null;UI.fedit=null;UI.planForm=null;UI.draw=null;render()},
+    UI.vsel=null;UI.vedit=null;UI.gedit=null;UI.fedit=null;UI.zedit=null;UI.cropForm=null;UI.treeSel=null;UI.planForm=null;UI.draw=null;render()},
   /* dati arrivati dal cloud: sostituiscono parcelle, piani, campioni e segni */
-  applyRemote:function(d){if(d.customProducts)S.customProducts=d.customProducts;if(d.notes)S.notes=d.notes;if(d.terreni)S.terreni=d.terreni;S.plots=d.plots;S.plans=d.plans;S.samples=d.samples;S.inv=d.inv||{items:[],moves:[]};if(d.meteo){var man=S.meteo&&S.meteo.manual;S.meteo=d.meteo;S.meteo.manual=!!man}S.geo=d.geo||S.geo||null;S.marksMeta=d.marksMeta||{};
+  applyRemote:function(d){if(d.customProducts)S.customProducts=d.customProducts;if(d.customCrops)S.customCrops=d.customCrops;if(d.notes)S.notes=d.notes;if(d.terreni)S.terreni=d.terreni;S.plots=d.plots;S.plans=d.plans;S.samples=d.samples;S.inv=d.inv||{items:[],moves:[]};if(d.meteo){var man=S.meteo&&S.meteo.manual;S.meteo=d.meteo;S.meteo.manual=!!man}S.geo=d.geo||S.geo||null;S.marksMeta=d.marksMeta||{};
     if(S.sel&&!plotById(S.sel))S.sel=S.plots[0]&&S.plots[0].id;if(!S.sel&&S.plots[0])S.sel=S.plots[0].id;S.vineInit=true;var had=stripSamples(S);saveLocal();safeRender();if(had)setTimeout(save,300)},
   render:function(){safeRender()},
   saveLocal:function(){saveLocal()},
@@ -1287,7 +1329,7 @@ window.QO={
   isLocal:function(){return KEY===LOCALKEY},
   plotName:function(id){var p=plotById(id);return p?p.name:"appezzamento"},
   /* strumenti per la mappa satellitare (js/mappa.js) */
-  ui:UI,save:function(){save()},plotById:plotById,fillPlot:fill,ortoSel:ortoSel,vineGeo:vineGeo,vineGeoGuide:vineGeoGuide,defaultGuide:defaultGuide,straightGuide:straightGuide,guideSmooth:guideSmooth,guidePts:guidePts,guideAngle:guideAngle,simplifyLine:simplifyLine,longestEdgeAngle:longestEdgeAngle,ceppoXY:ceppoXY,rowLine:rowLine,nearestCeppo:nearestCeppo,rowNo:rowNo,vignes:vignes,labelPt:labelPt,terreni:terreni,terById:terById,terSel:terSel,inTer:inTer,natCmp:natCmp,autoTer:autoTer,parseGeoFile:parseGeoFile,ensureGeo:ensureGeo,llToPts:llToPts,importPolys:importPolys,vineDefaults:vineDefaults,vineStats:vineStats,stageOf:stageOf,stageName:function(k){return STN[k]?STN[k][1]:k},readFileAsText:readFileAsText,views:function(){return VIEWS},vdot:vdot,pip:pip,area:area,bbox:bbox,num:num,m2:m2,fmt:fmt,
+  ui:UI,save:function(){save()},plotById:plotById,fillPlot:fill,ortoSel:ortoSel,isTree:isTree,mergeCrops:mergeCrops,typeNames:TYPEN,vineGeo:vineGeo,vineGeoGuide:vineGeoGuide,defaultGuide:defaultGuide,straightGuide:straightGuide,guideSmooth:guideSmooth,guidePts:guidePts,guideAngle:guideAngle,simplifyLine:simplifyLine,longestEdgeAngle:longestEdgeAngle,ceppoXY:ceppoXY,rowLine:rowLine,nearestCeppo:nearestCeppo,rowNo:rowNo,vignes:vignes,labelPt:labelPt,terreni:terreni,terById:terById,terSel:terSel,inTer:inTer,natCmp:natCmp,autoTer:autoTer,parseGeoFile:parseGeoFile,ensureGeo:ensureGeo,llToPts:llToPts,importPolys:importPolys,vineDefaults:vineDefaults,vineStats:vineStats,stageOf:stageOf,stageName:function(k){return STN[k]?STN[k][1]:k},readFileAsText:readFileAsText,views:function(){return VIEWS},vdot:vdot,pip:pip,area:area,bbox:bbox,num:num,m2:m2,fmt:fmt,
   typeName:TYPEN,stroke:STROKE,fill:FILL,
   setMark:function(plotId,key,state){var p=plotById(plotId);if(!p||!p.vine)return;if(state)p.vine.marks[key]=state;else delete p.vine.marks[key];save();render()}
 };
@@ -1319,6 +1361,8 @@ load();render();
 <script src="js/filari.js"></script>
 <script src="js/forma.js"></script>
 <script src="js/bancali.js"></script>
+<script src="js/colture.js"></script>
+<script src="js/alberi.js"></script>
 <script>
 if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
 </script>

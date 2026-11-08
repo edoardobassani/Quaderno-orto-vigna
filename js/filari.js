@@ -127,7 +127,7 @@
         out += q[2] ? '<rect x="' + (q[0] - r) + '" y="' + (q[1] - r) + '" width="' + 2 * r + '" height="' + 2 * r + '" fill="' + fl + '" stroke="' + ORANGE + '" stroke-width="3" vector-effect="non-scaling-stroke"/>' : '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="' + r + '" fill="' + fl + '" stroke="' + ORANGE + '" stroke-width="3" vector-effect="non-scaling-stroke"/>';
       });
     }
-    out += '<text x="' + (view.x + 12 * kk) + '" y="' + (view.y + 22 * kk) + '" text-anchor="start" font-size="' + 14 * kk + '" font-weight="700" fill="var(--ink)" stroke="var(--surface)" stroke-width="3" paint-order="stroke" pointer-events="none">N ↑</text>';
+    out += '<text x="' + (view.x + 12 * kk) + '" y="' + (view.y + 22 * kk) + '" text-anchor="start" font-size="' + 14 * kk + '" font-weight="700" fill="var(--ink)" stroke="var(--surface)" stroke-width="' + 3 * kk + '" paint-order="stroke" pointer-events="none">N ↑</text>';
     if (!s.querySelector("#gbg")) s.innerHTML = '<g id="gbg"></g><g id="gfg"></g>';
     if (SF) SF.paint(s.querySelector("#gbg"), view, kk); else s.querySelector("#gbg").innerHTML = "";
     s.querySelector("#gfg").innerHTML = out;

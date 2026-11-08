@@ -145,6 +145,7 @@ function decode() {
     const p = { id, name: d.name || "Area", type: d.type || "campo", pts: (d.pts || []).map((q) => [q.x, q.y]), plants: d.plants || [] };
     if (d.ter) p.ter = d.ter;
     if (d.beds) p.beds = d.beds;
+    if (d.single) p.single = true;
     if (d.vine) p.vine = Object.assign({ phen: [] }, d.vine, { marks: {} });
     return p;
   }).sort((a, b) => a.name.localeCompare(b.name, "it"));
@@ -174,7 +175,8 @@ function decode() {
   const tl = (remote.impostazioni || {}).terreni;
   const terreni = tl && tl.list ? tl.list.map((t) => ({ id: t.id, name: t.name, pts: t.pts ? t.pts.map((q) => [q.x, q.y]) : null })) : null;
   const notes = Object.entries(remote.note || {}).map(([id, d]) => strip(id, d)).sort((a, b) => (a.at < b.at ? -1 : 1));
-  return { plots, plans, samples, geo: g && g.geo ? g.geo : null, marksMeta, inv, meteo, customProducts, notes, terreni };
+  const col = (remote.impostazioni || {}).colture, customCrops = col && col.list ? col.list : null;
+  return { plots, plans, samples, geo: g && g.geo ? g.geo : null, marksMeta, inv, meteo, customProducts, customCrops, notes, terreni };
 }
 function encode(S) {
   const out = { parcelle: {}, piani: {}, campioni: {}, segni: {}, impostazioni: {}, articoli: {}, movimenti: {}, meteo: {}, prodotti: {}, note: {} };
@@ -182,6 +184,7 @@ function encode(S) {
     const d = { name: p.name, type: p.type, pts: p.pts.map((q) => ({ x: q[0], y: q[1] })), plants: p.plants || [] };
     if (p.ter) d.ter = p.ter;
     if (p.beds && p.beds.length) d.beds = p.beds;
+    if (p.single) d.single = true;
     if (p.vine) {
       const v = Object.assign({}, p.vine); delete v.marks; d.vine = v;
       Object.keys(p.vine.marks || {}).forEach((k) => { out.segni[p.id + "__" + k.replace(/:/g, "-")] = { plot: p.id, key: k, stato: p.vine.marks[k] }; });
@@ -192,6 +195,8 @@ function encode(S) {
   (S.samples || []).forEach((s) => { const d = Object.assign({}, s); delete d.id; out.campioni[s.id] = clean(d); });
   (S.notes || []).forEach((n) => { const d = Object.assign({}, n); delete d.id; out.note[n.id] = clean(d); });
   out.impostazioni.geo = { geo: S.geo ? clean(S.geo) : null };
+  /* colture scritte a mano e correzioni a quelle pronte */
+  out.impostazioni.colture = clean({ list: S.customCrops || {} });
   out.impostazioni.terreni = clean({ list: (S.terreni || []).map((t) => ({ id: t.id, name: t.name, pts: t.pts ? t.pts.map((q) => ({ x: q[0], y: q[1] })) : null })) });
   const inv = S.inv || { items: [], moves: [] };
   inv.items.forEach((it) => { const d = Object.assign({}, it); delete d.id; out.articoli[it.id] = clean(d); });
@@ -214,7 +219,7 @@ function applyAll() {
   if (uploadPending) {
     const d = uploadPending; uploadPending = null;
     baseline = encode({ plots: [], plans: [], samples: [], geo: null, inv: { items: [], moves: [] } });
-    QO().applyRemote({ plots: d.plots || [], plans: d.plans || [], samples: d.samples || [], geo: d.geo || null, marksMeta: {}, inv: d.inv || { items: [], moves: [] }, notes: d.notes || [], terreni: d.terreni || [] });
+    QO().applyRemote({ plots: d.plots || [], plans: d.plans || [], samples: d.samples || [], geo: d.geo || null, marksMeta: {}, inv: d.inv || { items: [], moves: [] }, notes: d.notes || [], terreni: d.terreni || [], customCrops: d.customCrops || null });
     doPush(QO().getState(), true);
     return;
   }
@@ -384,7 +389,7 @@ async function act(a, id) {
       case "create": {
         const nome = val("saAz"); if (!nome) { msg = "Dai un nome all'azienda."; break; }
         const up = document.getElementById("saUp").checked, st = QO().getState();
-        const copy = up ? clean({ plots: st.plots, plans: st.plans, samples: st.samples || [], geo: st.geo || null, inv: st.inv || { items: [], moves: [] }, notes: st.notes || [], terreni: st.terreni || [] }) : null;
+        const copy = up ? clean({ plots: st.plots, plans: st.plans, samples: st.samples || [], geo: st.geo || null, inv: st.inv || { items: [], moves: [] }, notes: st.notes || [], terreni: st.terreni || [], customCrops: st.customCrops || {} }) : null;
         const ref = await F.addDoc(F.collection(db, "aziende"), { nome, membri: { [user.uid]: "titolare" }, membriInfo: { [user.uid]: { nome: myName(), email: user.email || "" } }, creata: F.serverTimestamp() });
         enter({ id: ref.id, data: { nome, membri: { [user.uid]: "titolare" }, membriInfo: { [user.uid]: { nome: myName(), email: user.email || "" } } } }, copy);
         msg = "Azienda creata" + (up ? ": sto caricando i dati del dispositivo." : "."); break;
