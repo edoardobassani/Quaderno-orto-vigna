@@ -301,7 +301,7 @@
   /* ---------------- dati di esempio (solo in modalità locale) ---------------- */
   function seed() {
     var s = S();
-    if (s.inv || !Q.isLocal() || !s.plots.some(function (p) { return p.id === "v1"; })) { inv(); return; }
+    inv(); return; /* niente più dati di esempio */
     var t = Q.today(), d = function (n) { return Q.iso(Q.addDays(t, n)); }, NOTE = "Dati di esempio";
     var items = [
       { id: "ir", name: "Rame ossicloruro 35% WG", cat: "difesa", unit: "kg", min: 20, prod: "rame", dose: 3, cu: 35 },

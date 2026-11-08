@@ -49,7 +49,8 @@ const errText = (e) => {
 
 /* ---------------- barra di stato ---------------- */
 let status = { text: "Solo su questo dispositivo", cls: "" };
-function setStatus(text, cls) { status = { text, cls }; const el = $("#syncbar"); if (el) el.innerHTML = `<button type="button" data-sa="open" aria-haspopup="dialog"><span class="syncdot ${cls}"></span><span>${esc(text)}</span></button>`; }
+const CLOUD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.1 9.2 4.5 4.5 0 0 0 7 18Z"/></svg>';
+function setStatus(text, cls) { status = { text, cls }; const el = $("#syncbar"); if (el) el.innerHTML = `<button type="button" class="cloudbtn" data-sa="open" aria-haspopup="dialog" aria-label="${esc(text)}" title="${esc(text)}">${CLOUD}<span class="syncdot ${cls}"></span></button>`; }
 function refreshStatus() {
   if (!firebaseConfig) return setStatus("Solo su questo dispositivo", "");
   if (!auth) return;
@@ -278,6 +279,7 @@ function renderSheet() {
   if (!sheetOpen) { el.innerHTML = ""; return; }
   let h = '<div role="dialog" aria-modal="true" aria-labelledby="acctTitle"><div class="stack">';
   h += `<div class="row" style="justify-content:space-between"><h2 id="acctTitle">Account e azienda</h2><button class="btn sm" data-sa="close">Chiudi</button></div>`;
+  h += `<div class="row" style="flex-wrap:nowrap;gap:8px"><span class="syncdot ${status.cls || ""}"></span><span>${esc(status.text || "")}</span></div>`;
   if (msg) h += `<div class="panel small" role="status">${esc(msg)}</div>`;
   if (!firebaseConfig) {
     h += '<div class="panel stack"><b>La condivisione non è ancora attiva.</b><span class="small">Per usare l\'app in più persone serve un progetto Firebase. Segui la guida nel file README del repository, poi incolla la configurazione in js/config.js.</span><span class="small muted">Nel frattempo tutto funziona su questo dispositivo.</span></div>';

@@ -118,6 +118,12 @@ Il piano gratuito (Spark) basta per un'azienda con pochi utenti.
 3. **Invita un collega** con la sua email e il ruolo.
 4. Il collega apre il link dell'app, crea l'account **con la stessa email**, la conferma e trova l'invito nella barra in alto.
 
+## Trovare una parcella
+
+In Vigna → Parcelle: la mappa del terreno (tocca una terrazza per aprirla, due dita per ingrandire), la ricerca per numero o nome ("12" apre la Terrazza 12) e **Dove sono**, che col GPS apre la terrazza in cui ti trovi.
+
+In alto a sinistra la nuvola mostra lo stato del cloud: verde sincronizzato, arancio in attesa di rete, rosso non raggiungibile. Toccala per i dettagli e l'account.
+
 ## Terreni, confini e terrazze
 
 Se l'azienda è su più corpi separati, in **Vigna → Terreni e confini** crei un terreno per ognuno. In alto, nelle sezioni Vigna e Mappa, scegli se vedere tutto o un solo terreno.
