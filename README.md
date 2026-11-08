@@ -138,6 +138,7 @@ Se l'azienda è su più corpi separati, in **Vigna → Terreni e confini** crei 
 
   Mentre lo modifichi vedi subito quanti filari e ceppi risultano. Il filare 1 è quello disegnato più spesso; *Inverti numerazione* lo sposta sull'altro lato. Se la parcella ha già segni sui ceppi, l'app avvisa prima di salvare: i segni restano sugli stessi numeri ma finirebbero su ceppi diversi.
 - Le parcelle nuove partono con un filare guida che segue la forma della terrazza. Quelle create prima di questa versione mantengono i loro filari finché non apri *Direzione* e salvi.
+- **Modificare la forma** di una parcella già creata: pulsante *Forma* nella scheda della parcella (o *Modifica forma* nella Mappa, per gli appezzamenti dell'orto). Trascini i punti, trascini o tocchi un "+" a metà di un lato per aggiungere un punto, tocchi un punto e poi *Togli punto* per eliminarlo, *Sposta tutta* per muovere l'intera forma, *Annulla ultima* per tornare indietro. La forma di prima resta tratteggiata e le parcelle vicine si vedono in grigio. Se ci sono segni sui ceppi l'app avvisa prima di salvare.
 - **Filari di ogni terrazza** (in "Modifica dati"): *copiati dal filare guida* oppure *inseriti a mano*, filare per filare con il numero di ceppi. Puoi scegliere da che numero parte la numerazione dei filari.
 
 Le mappe delle parcelle si ingrandiscono con due dita (o con la rotella del mouse).

@@ -448,7 +448,7 @@ function bindPan(svg,key,onTap){
 
 /* ---------- stato UI ---------- */
 var UI={tab:"oggi",draw:null,form:null,mode:"pianta",confirm:null,planForm:null};
-function setTab(t){UI.tab=t;UI.confirm=null;render();window.scrollTo(0,0)}
+function setTab(t){UI.tab=t;UI.confirm=null;if(window.QOForma)window.QOForma.close();render();window.scrollTo(0,0)}
 
 /* ---------- render ---------- */
 var ICON={
@@ -467,7 +467,7 @@ function renderNav(){
   var due=S.plans.filter(function(p){var d=nextDue(p);return d&&d<=today()}).length;
   $("#nav").innerHTML=TABS.map(function(t){return '<a href="#" data-tab="'+t[0]+'" aria-label="'+TABN[t[0]]+'" title="'+TABN[t[0]]+'"'+(UI.tab===t[0]?' aria-current="page"':'')+'>'+ICON[t[0]]+(t[0]==="trattamenti"&&due?' <span class="badge b-warn">'+due+'</span>':'')+(t[0]==="magazzino"&&window.QOInv&&window.QOInv.alertsCount()?' <span class="badge b-bad">'+window.QOInv.alertsCount()+'</span>':'')+'</a>'}).join("");
 }
-function render(){mergeCustom();renderNav();renderZoomPop();var a=$("#app");a.innerHTML=({oggi:vOggi,mappa:vMappa,impianto:vImpianto,vigna:vVigna,trattamenti:vTratt,magazzino:function(){return window.QOInv?window.QOInv.view():'<div class="top"><h1>Magazzino</h1></div><div class="panel">Caricamento…</div>'},libreria:vLib})[UI.tab]();afterRender()}
+function render(){mergeCustom();renderNav();renderZoomPop();var a=$("#app");if(UI.fedit&&window.QOForma){a.innerHTML=window.QOForma.html();afterRender();return}a.innerHTML=({oggi:vOggi,mappa:vMappa,impianto:vImpianto,vigna:vVigna,trattamenti:vTratt,magazzino:function(){return window.QOInv?window.QOInv.view():'<div class="top"><h1>Magazzino</h1></div><div class="panel">Caricamento…</div>'},libreria:vLib})[UI.tab]();afterRender()}
 
 var FILL={serra:"var(--serra-fill)",campo:"var(--campo-fill)",tunnel:"var(--tunnel-fill)",vigna:"var(--vigna-fill)"};
 var STROKE={serra:"var(--serra)",campo:"var(--accent)",tunnel:"var(--tunnel)",vigna:"var(--vigna)"};
@@ -504,7 +504,7 @@ function vMappa(){
   if(sel){
     h+='<div class="panel stack" style="margin-top:12px"><div class="row" style="justify-content:space-between"><h2>'+esc(sel.name)+'</h2><span class="badge b-n">'+TYPEN[sel.type]+'</span></div>';
     h+='<div class="grid2"><label class="f">Nome<input id="pName" value="'+esc(sel.name)+'"></label><label class="f">Tipo<select id="pType">'+["serra","tunnel","campo","vigna"].map(function(t){return '<option value="'+t+'"'+(sel.type===t?' selected':'')+'>'+TYPEN[t]+'</option>'}).join("")+'</select></label></div>';
-    h+='<div class="row"><button class="btn primary" data-act="goImp">Apri impianto</button><button class="btn danger" data-act="delPlot">'+(UI.confirm==="plot"?'Tocca ancora per eliminare':'Elimina')+'</button></div></div>';
+    h+='<div class="row"><button class="btn primary" data-act="goImp">Apri impianto</button><button class="btn" data-act="fOpen" data-id="'+sel.id+'">Modifica forma</button><button class="btn danger" data-act="delPlot">'+(UI.confirm==="plot"?'Tocca ancora per eliminare':'Elimina')+'</button></div></div>';
   }
   return h;
 }
@@ -1004,7 +1004,7 @@ function vParcelle(){
   vs.forEach(function(p){var st=vineStats(p),sg=stageOf(p);if(grp&&(p.ter||"")!==lastT){lastT=p.ter||"";var tt=terById(lastT);h+='<div class="small muted" style="margin:8px 0 2px;font-weight:700">'+(tt?esc(tt.name):'Senza terreno')+'</div>'}h+='<button class="item" data-act="vSel" data-id="'+p.id+'"'+(UI.vsel===p.id?' aria-current="true"':'')+'><span class="swatch" style="background:var(--vigna-fill);border-color:var(--vigna)"></span><span class="grow"><b>'+esc(p.name)+'</b><br><span class="muted small">'+esc(p.vine.varieta||"varietà da indicare")+' · '+num(st.ha,2)+' ha · '+st.filari+(st.filari===1?' filare · ':' filari · ')+st.ceppi.toLocaleString("it-IT")+' ceppi'+(st.f?' · '+st.f+' fall.':'')+'</span></span>'+(sg?'<span class="badge b-n">'+STN[sg.st][1]+'</span>':'')+'</button>'});
   h+='</div>';
   var p=plotById(UI.vsel);if(!p)return h;var st=vineStats(p),V=p.vine,sg=stageOf(p);
-  h+='<div class="row" id="vdet" style="justify-content:space-between;margin:16px 0 8px;scroll-margin-top:12px"><h2>'+esc(p.name)+'</h2><div class="row" style="gap:6px">'+(V.rmode!=="man"?'<button class="btn sm" data-act="gOpen">Direzione</button>':'')+'<button class="btn sm" data-act="vEdit">Modifica dati</button></div></div>';
+  h+='<div class="row" id="vdet" style="justify-content:space-between;margin:16px 0 8px;scroll-margin-top:12px"><h2>'+esc(p.name)+'</h2><div class="row" style="gap:6px"><button class="btn sm" data-act="fOpen">Forma</button>'+(V.rmode!=="man"?'<button class="btn sm" data-act="gOpen">Direzione</button>':'')+'<button class="btn sm" data-act="vEdit">Modifica dati</button></div></div>';
   h+='<div class="row" style="margin-bottom:8px">'+[["vista","Vista"],["f","Segna fallanza"],["s","Segna sintomi"],["n","Rimpiazza"],["ok","Togli segno"]].map(function(m){return '<button class="btn sm" data-act="vMode" data-m="'+m[0]+'" aria-pressed="'+(UI.vmode===m[0])+'">'+m[1]+'</button>'}).join("")+'</div>';
   h+='<div class="mapwrap"><svg id="vinesvg" role="img" aria-label="Filari e ceppi della parcella"></svg><div class="zoom"><button data-act="zin" data-k="vine-'+p.id+'" aria-label="Ingrandisci">+</button><button data-act="zout" data-k="vine-'+p.id+'" aria-label="Rimpicciolisci">−</button><button data-act="zfit" data-k="vine-'+p.id+'" aria-label="Adatta" style="font-size:13px">⤢</button></div><div class="hint">'+(UI.vmode==="vista"?'Allarga con due dita per vedere i ceppi, tocca un ceppo per sapere filare e numero.':'Tocca un ceppo per '+(UI.vmode==="f"?'segnarlo come fallanza':UI.vmode==="s"?'segnare sintomi':UI.vmode==="n"?'segnarlo come rimpiazzato con una barbatella nuova':'togliere il segno')+'.')+'</div></div>';
   h+='<div class="panel stack" style="margin-top:10px"><div class="kv"><div><span>Superficie</span><b>'+num(st.ha,2)+' ha</b></div><div><span>Filari</span><b>'+st.filari+'</b></div><div><span>Ceppi</span><b>'+st.ceppi.toLocaleString("it-IT")+'</b></div><div><span>Ceppi/ha</span><b>'+Math.round(st.dens).toLocaleString("it-IT")+'</b></div><div><span>Metri di filare</span><b>'+Math.round(st.len).toLocaleString("it-IT")+'</b></div><div><span>Sesto</span><b>'+num(V.inter,2)+' × '+num(V.row,2)+'</b></div></div>';
@@ -1135,6 +1135,7 @@ var VACT={
   vNew:function(){UI.vedit={name:"Parcella "+(vignes().length+1),varieta:"",port:"",anno:today().getFullYear(),forma:"Guyot",inter:2.5,row:0.9,ori:0,L:100,W:50,rmode:"guida",r0:1,mrows:[],ter:terSel(),nrows:0,oriAuto:true};window.scrollTo(0,0)},
   vEdit:function(){var p=plotById(UI.vsel),V=p.vine;UI.vedit={id:p.id,name:p.name,varieta:V.varieta,port:V.port,anno:V.anno,forma:V.forma,inter:V.inter,row:V.row,ori:V.ori,barb:V.barb||"",rmode:V.rmode||"auto",r0:V.r0||1,nrows:+V.nrows||0,oriAuto:!!V.oriAuto,mrows:(V.mrows||[]).map(function(r){return {c:r.c,len:r.len}}),guida:V.guida||null,grev:!!V.grev,ter:p.ter||""};window.scrollTo(0,0)},
   vCancel:function(){UI.vedit=null},
+  fOpen:function(b,id){if(!window.QOForma){toast("Schermata non ancora caricata, riprova");return false}window.QOForma.open(id||UI.vsel);window.scrollTo(0,0)},
   gOpen:function(){if(UI.vedit)readVForm();if(!window.QOFil){toast("Schermata non ancora caricata, riprova");return false}window.QOFil.open(UI.vedit?UI.vedit.id:UI.vsel);window.scrollTo(0,0)},
   vCreateRect:function(){readVForm();var f=UI.vedit;if(!(f.L>0&&f.W>0)){toast("Inserisci lunghezza e larghezza");return false}var bb=contentBottom(),p={id:uid(),name:f.name,type:"vigna",pts:rect(bb.x0,bb.y1+6,f.L,f.W),plants:[],vine:vineDefaults(f)};if(f.ter)p.ter=f.ter;S.plots.push(p);UI.vsel=p.id;S.sel=p.id;UI.vedit=null;delete VIEWS.map;save();toast("Parcella creata: "+num(f.L*f.W/1e4,2)+" ha")},
   vCreateDraw:function(){readVForm();UI.pendingVine=UI.vedit;UI.vedit=null;UI.tab="mappa";UI.draw={pts:[],closed:false,name:UI.pendingVine.name,type:"vigna",ter:UI.pendingVine.ter||""};var bb=contentBottom();if(bb.x1!=null)fitView("map",{x0:bb.x0,y0:bb.y0,x1:bb.x1+40,y1:bb.y1+40},6);toast("Tocca i vertici della parcella sulla mappa")},
@@ -1178,6 +1179,7 @@ function vineChange(t){
 }
 
 function afterRender(){
+  if(UI.fedit&&window.QOForma){window.QOForma.after();return}
   if(UI.tab==="mappa"){if(window.QOMap&&window.QOMap.ok()&&$("#lmapSlot"))window.QOMap.mount($("#lmapSlot"));else{drawMap();var s=$("#mapsvg");if(s)bindPan(s,"map",function(pt,e){mapTap(pt,e)})}}
   if(UI.tab==="impianto"){drawImp();var s2=$("#impsvg");if(s2)bindPan(s2,"imp-"+S.sel,impTap)}
   if(UI.tab==="vigna"&&UI.gedit&&window.QOFil)window.QOFil.after();
@@ -1260,7 +1262,7 @@ window.QO={
     try{var r=localStorage.getItem(KEY);if(r){S=JSON.parse(r)}else if(KEY===LOCALKEY){S=sample()}else{S={plots:[],plans:[],samples:[],vineInit:true}}}catch(e){S=KEY===LOCALKEY?sample():{plots:[],plans:[],samples:[],vineInit:true}}
     ["weather","cropSel","vw","botte"].forEach(function(f){if(S[f]==null&&prefs[f]!=null)S[f]=prefs[f]});
     if(!S.weather)S.weather={t:14,rh:70,wet:0,rain:0};if(!S.vw)S.vw={t:12,rain:0,shoot:0};if(!S.botte)S.botte={sel:{},prod:"rame",dose:3,unit:"kg",water:500,tank:1000,tit:20};if(!S.cropSel)S.cropSel="lattuga";if(!S.samples)S.samples=[];if(!S.inv)S.inv={items:[],moves:[]};
-    UI.vsel=null;UI.vedit=null;UI.gedit=null;UI.planForm=null;UI.draw=null;render()},
+    UI.vsel=null;UI.vedit=null;UI.gedit=null;UI.fedit=null;UI.planForm=null;UI.draw=null;render()},
   /* dati arrivati dal cloud: sostituiscono parcelle, piani, campioni e segni */
   applyRemote:function(d){if(d.customProducts)S.customProducts=d.customProducts;if(d.notes)S.notes=d.notes;if(d.terreni)S.terreni=d.terreni;S.plots=d.plots;S.plans=d.plans;S.samples=d.samples;S.inv=d.inv||{items:[],moves:[]};if(d.meteo){var man=S.meteo&&S.meteo.manual;S.meteo=d.meteo;S.meteo.manual=!!man}S.geo=d.geo||S.geo||null;S.marksMeta=d.marksMeta||{};
     if(S.sel&&!plotById(S.sel))S.sel=S.plots[0]&&S.plots[0].id;if(!S.sel&&S.plots[0])S.sel=S.plots[0].id;S.vineInit=true;var had=stripSamples(S);saveLocal();safeRender();if(had)setTimeout(save,300)},
@@ -1303,6 +1305,7 @@ load();render();
 <script src="js/voce.js"></script>
 <script src="js/terreni.js"></script>
 <script src="js/filari.js"></script>
+<script src="js/forma.js"></script>
 <script>
 if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
 </script>

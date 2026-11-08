@@ -43,12 +43,13 @@ Pubblicata su GitHub Pages: https://edoardobassani.github.io/Quaderno-orto-vigna
 | `js/prodotti.js` | Prodotti personalizzati (`S.customProducts`), ricerca per codice a barre su Open Products Facts, link alla banca dati del Ministero. Espone `window.QOProd`. |
 | `js/voce.js` | Comandi vocali e note dettate, interprete a regole italiano. Espone `window.QOVoice`. |
 | `js/terreni.js` | Terreni, confini, import guidato di confine e terrazze, riepilogo in Oggi. Espone `window.QOTer`. |
+| `js/forma.js` | Schermata "Modifica forma" di una parcella già creata (vertici da trascinare, "+" sui lati, togli punto, sposta tutta, annulla). Stato in `QO.ui.fedit`; quando è aperta, `render()` mostra solo questa schermata. Espone `window.QOForma`. Attributo dei pulsanti: `data-fo`. |
 | `js/filari.js` | Schermata "Direzione dei filari": filare guida disegnato col dito, camminato col GPS o ruotato; anteprima dal vivo. Stato in `QO.ui.gedit`. Espone `window.QOFil`. Attributo dei pulsanti: `data-fi`. |
 | `sw.js` | Service worker (vedi "Pubblicare una modifica"). |
 | `firestore.rules` | Regole di sicurezza del database. Si incollano a mano nella console Firebase. |
 | `README.md` | Guida per gli utenti (in italiano). Quando aggiungi una funzione visibile, aggiungi o aggiorna la sezione corrispondente. |
 
-Ordine degli script in fondo a `index.html`: sync.js (modulo), Leaflet, mappa.js, inventario.js, meteo.js, prodotti.js, voce.js, terreni.js, filari.js, poi la registrazione del service worker. I moduli leggono e scrivono solo attraverso `window.QO`, e alla fine chiamano `Q.render()`.
+Ordine degli script in fondo a `index.html`: sync.js (modulo), Leaflet, mappa.js, inventario.js, meteo.js, prodotti.js, voce.js, terreni.js, filari.js, forma.js, poi la registrazione del service worker. I moduli leggono e scrivono solo attraverso `window.QO`, e alla fine chiamano `Q.render()`.
 
 ### Librerie da CDN (versioni fissate)
 
@@ -82,7 +83,8 @@ Se aggiungi un host nuovo, aggiungilo anche a `LIB_HOSTS` in `sw.js`.
   - `data-mp`: mappa;
   - `data-sa`: sync;
   - `data-pr`: prodotti;
-  - `data-fi`: direzione dei filari.
+  - `data-fi`: direzione dei filari;
+  - `data-fo`: modifica della forma.
 - **Salvataggio**: `save()` salva in locale e, se c'è il cloud, chiama `QOSync.push(S)`. Dopo `save()` serve un `render()` esplicito.
 - **Testi dinamici**: passa sempre per `esc()` prima di metterli nell'HTML.
 - **Conferme**: niente `alert` o `confirm`. Per le azioni distruttive si usa il "tocca ancora", con `UI.confirm` o variabili simili. Per gli esiti si usa `toast()`.
