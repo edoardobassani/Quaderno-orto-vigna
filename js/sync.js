@@ -176,7 +176,8 @@ function decode() {
   const terreni = tl && tl.list ? tl.list.map((t) => ({ id: t.id, name: t.name, pts: t.pts ? t.pts.map((q) => [q.x, q.y]) : null })) : null;
   const notes = Object.entries(remote.note || {}).map(([id, d]) => strip(id, d)).sort((a, b) => (a.at < b.at ? -1 : 1));
   const col = (remote.impostazioni || {}).colture, customCrops = col && col.list ? col.list : null;
-  return { plots, plans, samples, geo: g && g.geo ? g.geo : null, marksMeta, inv, meteo, customProducts, customCrops, notes, terreni };
+  const mac = (remote.impostazioni || {}).macchine, macchine = mac && mac.list ? mac.list : null;
+  return { plots, plans, samples, geo: g && g.geo ? g.geo : null, marksMeta, inv, meteo, customProducts, customCrops, macchine, notes, terreni };
 }
 function encode(S) {
   const out = { parcelle: {}, piani: {}, campioni: {}, segni: {}, impostazioni: {}, articoli: {}, movimenti: {}, meteo: {}, prodotti: {}, note: {} };
@@ -197,6 +198,8 @@ function encode(S) {
   out.impostazioni.geo = { geo: S.geo ? clean(S.geo) : null };
   /* colture scritte a mano e correzioni a quelle pronte */
   out.impostazioni.colture = clean({ list: S.customCrops || {} });
+  /* macchine per i trattamenti, con le terrazze assegnate */
+  out.impostazioni.macchine = clean({ list: S.macchine || [] });
   out.impostazioni.terreni = clean({ list: (S.terreni || []).map((t) => ({ id: t.id, name: t.name, pts: t.pts ? t.pts.map((q) => ({ x: q[0], y: q[1] })) : null })) });
   const inv = S.inv || { items: [], moves: [] };
   inv.items.forEach((it) => { const d = Object.assign({}, it); delete d.id; out.articoli[it.id] = clean(d); });
@@ -219,7 +222,7 @@ function applyAll() {
   if (uploadPending) {
     const d = uploadPending; uploadPending = null;
     baseline = encode({ plots: [], plans: [], samples: [], geo: null, inv: { items: [], moves: [] } });
-    QO().applyRemote({ plots: d.plots || [], plans: d.plans || [], samples: d.samples || [], geo: d.geo || null, marksMeta: {}, inv: d.inv || { items: [], moves: [] }, notes: d.notes || [], terreni: d.terreni || [], customCrops: d.customCrops || null });
+    QO().applyRemote({ plots: d.plots || [], plans: d.plans || [], samples: d.samples || [], geo: d.geo || null, marksMeta: {}, inv: d.inv || { items: [], moves: [] }, notes: d.notes || [], terreni: d.terreni || [], customCrops: d.customCrops || null, macchine: d.macchine || null });
     doPush(QO().getState(), true);
     return;
   }
@@ -389,7 +392,7 @@ async function act(a, id) {
       case "create": {
         const nome = val("saAz"); if (!nome) { msg = "Dai un nome all'azienda."; break; }
         const up = document.getElementById("saUp").checked, st = QO().getState();
-        const copy = up ? clean({ plots: st.plots, plans: st.plans, samples: st.samples || [], geo: st.geo || null, inv: st.inv || { items: [], moves: [] }, notes: st.notes || [], terreni: st.terreni || [], customCrops: st.customCrops || {} }) : null;
+        const copy = up ? clean({ plots: st.plots, plans: st.plans, samples: st.samples || [], geo: st.geo || null, inv: st.inv || { items: [], moves: [] }, notes: st.notes || [], terreni: st.terreni || [], customCrops: st.customCrops || {}, macchine: st.macchine || [] }) : null;
         const ref = await F.addDoc(F.collection(db, "aziende"), { nome, membri: { [user.uid]: "titolare" }, membriInfo: { [user.uid]: { nome: myName(), email: user.email || "" } }, creata: F.serverTimestamp() });
         enter({ id: ref.id, data: { nome, membri: { [user.uid]: "titolare" }, membriInfo: { [user.uid]: { nome: myName(), email: user.email || "" } } } }, copy);
         msg = "Azienda creata" + (up ? ": sto caricando i dati del dispositivo." : "."); break;

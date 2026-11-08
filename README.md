@@ -161,6 +161,15 @@ In Vigna → Parcelle, sopra l'elenco, *Ordina*:
 
 Con più terreni (e nessun terreno scelto) l'elenco resta diviso prima per terreno. La scelta resta ricordata sul telefono. Lo stesso ordine per numero vale in tutti gli elenchi (Oggi, Botte, Orto…).
 
+## Macchine e calcolo della botte
+
+In **Vigna → Botte**, riquadro **Macchine**:
+- **+ Nuova macchina**: nome (es. "Trattore grande", "Cingolato"), capienza della botte in litri, litri d'acqua per ettaro e colore.
+- **Assegna le terrazze**: scegli la macchina e tocca le terrazze sulla mappa; toccandole di nuovo le togli. *Tutte quelle senza macchina* le dà in un colpo alla macchina scelta.
+- **Controlli**: l'app elenca le terrazze **senza macchina** (grigie tratteggiate) e quelle **su più macchine** (rosse), così nessuna resta fuori o viene trattata due volte.
+
+Nel **Calcolo della botte** scegli la macchina: terrazze, capienza e acqua per ettaro sono già quelle della macchina, e vedi quante botti servono, quanto prodotto va in ogni botte piena e nell'ultima. Sulla mappa (o nell'elenco) puoi aggiungere o togliere terrazze **solo per oggi**: le terrazze della macchina non cambiano e *Torna alle terrazze della macchina* annulla i cambi. *Scelta libera* è il calcolo di prima, con le terrazze spuntate a mano. Le macchine si condividono con i colleghi tramite il cloud.
+
 ## Sul PC
 
 L'app si apre anche dal computer (Chrome o Edge), allo stesso indirizzo; con il cloud vedi gli stessi dati del telefono. Quando la finestra è larga (da 1024 pixel in su, anche un tablet in orizzontale) l'impaginazione cambia da sola:

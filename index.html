@@ -140,7 +140,7 @@ table.reg th{border-top:0;color:var(--ink-2);font-weight:600;font-size:13px}
 .bar{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
 .bar span{display:block;height:100%;background:var(--accent)}
 .bar span.w{background:var(--warn)} .bar span.x{background:var(--bad)}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:12px;font-weight:600;z-index:30;max-width:calc(100% - 32px);text-align:center}
+.toast{pointer-events:none;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:12px;font-weight:600;z-index:30;max-width:calc(100% - 32px);text-align:center}
 details summary{cursor:pointer;font-weight:600;min-height:32px;display:flex;align-items:center}
 a{color:var(--serra)}
 .src{font-size:13px}
@@ -168,6 +168,7 @@ a{color:var(--serra)}
   .dk-cols>section>*{margin-top:0!important;margin-bottom:0!important}
   .dk-cols>section>h2:first-child,.dk-cols>section>.row:first-child h2{margin:0}
   .dk-ed .dk-grid{grid-template-columns:minmax(0,1fr) 380px}
+  .mapwrap.mac{max-width:680px}
 }
 </style>
 
@@ -582,6 +583,8 @@ function navEditor(){
   if(UI.fedit&&window.QOForma)return function(){window.QOForma.close()};
   if(UI.gedit&&window.QOFil)return function(){window.QOFil.close()};
   if(UI.cropForm)return function(){UI.cropForm=null};
+  if(UI.macForm)return function(){UI.macForm=null};
+  if(UI.macSel)return function(){UI.macSel=null};
   if(UI.bedForm)return function(){UI.bedForm=null};
   if(UI.vedit)return function(){UI.vedit=null};
   if(UI.planForm)return function(){UI.planForm=null};
@@ -1255,15 +1258,17 @@ function vDifesa(){
   return h;
 }
 function vBotte(){
-  var B=S.botte,vs=vignes().filter(inTer).sort(natCmp),P=PRODUCTS[B.prod];
-  var ha=vs.filter(function(p){return B.sel[p.id]}).reduce(function(s,p){return s+area(p.pts)/1e4},0);
-  var water=ha*B.water,prod=ha*B.dose,nb=water>0?Math.ceil(water/B.tank-1e-9):0,per=B.water>0?B.dose*B.tank/B.water:0,lastW=nb?water-(nb-1)*B.tank:0,lastP=B.water>0?lastW*B.dose/B.water:0,u=B.unit;
-  var h='<div class="panel stack"><h2>Calcolo della botte</h2>'+(vs.length>3?'<div class="row"><button class="btn sm" data-act="bAll" data-v="1">Seleziona tutte'+(terSel()?' del terreno':'')+' ('+vs.length+')</button><button class="btn sm" data-act="bAll" data-v="0">Nessuna</button></div>':'')+'<div class="stack" style="gap:6px">'+vs.map(function(p){return '<label class="row small" style="font-weight:600"><input type="checkbox" id="bp-'+p.id+'"'+(B.sel[p.id]?' checked':'')+'> '+esc(p.name)+' <span class="muted">'+num(area(p.pts)/1e4,2)+' ha</span></label>'}).join("")+'</div>';
-  h+='<div class="grid2"><label class="f">Prodotto<select id="bProd">'+Object.keys(PRODUCTS).map(function(k){return '<option value="'+k+'"'+(k===B.prod?' selected':'')+'>'+PRODUCTS[k].n+'</option>'}).join("")+'</select></label><label class="f">Dose per ettaro<span class="row" style="flex-wrap:nowrap;gap:6px"><input id="bDose" type="number" inputmode="decimal" step="0.1" value="'+B.dose+'"><select id="bUnit" style="width:80px"><option'+(u==="kg"?' selected':'')+'>kg</option><option'+(u==="L"?' selected':'')+'>L</option></select></span></label><label class="f">Acqua (L/ha)<input id="bWater" type="number" inputmode="numeric" value="'+B.water+'"></label><label class="f">Capacità botte (L)<input id="bTank" type="number" inputmode="numeric" value="'+B.tank+'"></label>'+(P.copper?'<label class="f">Rame metallo nel prodotto (%)<input id="bTit" type="number" inputmode="decimal" value="'+B.tit+'"></label>':'')+'</div></div>';
+  /* con le macchine (js/macchine.js) terrazze, capienza della botte e acqua per ettaro vengono dalla macchina scelta */
+  var B=S.botte,vs=vignes().filter(inTer).sort(natCmp),P=PRODUCTS[B.prod],MC=window.QOMac,mac=MC&&MC.calcMac(),isSel=function(p){return MC?MC.inCalc(p):!!B.sel[p.id]};
+  var WA=MC?MC.water():B.water,TK=MC?MC.tank():B.tank;
+  var ha=vs.filter(isSel).reduce(function(s,p){return s+area(p.pts)/1e4},0);
+  var water=ha*WA,prod=ha*B.dose,nb=water>0&&TK>0?Math.ceil(water/TK-1e-9):0,per=WA>0?B.dose*TK/WA:0,lastW=nb?water-(nb-1)*TK:0,lastP=WA>0?lastW*B.dose/WA:0,u=B.unit;
+  var h=(MC?MC.machinesHtml():'')+'<div class="panel stack" style="margin-top:10px"><h2>Calcolo della botte</h2>'+(MC?MC.calcHeadHtml(vs):'')+(vs.length>3?'<div class="row"><button class="btn sm" data-act="bAll" data-v="1">Seleziona tutte'+(terSel()?' del terreno':'')+' ('+vs.length+')</button><button class="btn sm" data-act="bAll" data-v="0">Nessuna</button></div>':'')+'<div class="stack" style="gap:6px">'+vs.map(function(p){return '<label class="row small" style="font-weight:600"><input type="checkbox" id="bp-'+p.id+'"'+(isSel(p)?' checked':'')+'> '+esc(p.name)+' <span class="muted">'+num(area(p.pts)/1e4,2)+' ha</span></label>'}).join("")+'</div>';
+  h+='<div class="grid2"><label class="f">Prodotto<select id="bProd">'+Object.keys(PRODUCTS).map(function(k){return '<option value="'+k+'"'+(k===B.prod?' selected':'')+'>'+PRODUCTS[k].n+'</option>'}).join("")+'</select></label><label class="f">Dose per ettaro<span class="row" style="flex-wrap:nowrap;gap:6px"><input id="bDose" type="number" inputmode="decimal" step="0.1" value="'+B.dose+'"><select id="bUnit" style="width:80px"><option'+(u==="kg"?' selected':'')+'>kg</option><option'+(u==="L"?' selected':'')+'>L</option></select></span></label>'+(mac?'':'<label class="f">Acqua (L/ha)<input id="bWater" type="number" inputmode="numeric" value="'+B.water+'"></label><label class="f">Capacità botte (L)<input id="bTank" type="number" inputmode="numeric" value="'+B.tank+'"></label>')+''+(P.copper?'<label class="f">Rame metallo nel prodotto (%)<input id="bTit" type="number" inputmode="decimal" value="'+B.tit+'"></label>':'')+'</div></div>';
   h+='<div class="panel stack" style="margin-top:10px"><div class="kv"><div><span>Superficie</span><b>'+num(ha,2)+' ha</b></div><div><span>Acqua totale</span><b>'+Math.round(water).toLocaleString("it-IT")+' L</b></div><div><span>Prodotto totale</span><b>'+num(prod,2)+' '+u+'</b></div><div><span>Botti</span><b>'+nb+'</b></div><div><span>Per botte piena</span><b>'+num(per,2)+' '+u+'</b></div><div><span>Ultima botte</span><b>'+Math.round(lastW)+' L · '+num(lastP,2)+' '+u+'</b></div></div>';
   if(P.copper){var cu=u==="kg"?B.dose*B.tit/100:0;h+='<div class="sep"></div><span class="small">Rame metallo per passaggio: <b class="mono">'+num(cu,2)+' kg/ha</b>.</span>';
     if(P.maxDose&&u==="kg"&&B.dose>P.maxDose)h+='<span class="small" style="color:var(--bad)">L\'etichetta verificata consente al massimo '+num(P.maxDose)+' kg/ha di prodotto sulla vite.</span>';
-    vs.filter(function(p){return B.sel[p.id]}).forEach(function(p){var tot=copperYear(p)+cu;h+='<span class="small">'+esc(p.name)+': con questo passaggio arrivi a <b class="mono">'+num(tot,2)+'</b> kg/ha nel '+today().getFullYear()+(tot>4?' <span style="color:var(--bad)">(sopra la media di 4 kg/ha)</span>':'')+'.</span>'})}
+    vs.filter(isSel).forEach(function(p){var tot=copperYear(p)+cu;h+='<span class="small">'+esc(p.name)+': con questo passaggio arrivi a <b class="mono">'+num(tot,2)+'</b> kg/ha nel '+today().getFullYear()+(tot>4?' <span style="color:var(--bad)">(sopra la media di 4 kg/ha)</span>':'')+'.</span>'})}
   h+='<span class="small muted">La dose va presa dall\'etichetta del tuo prodotto. Il volume d\'acqua dipende da fase vegetativa e atomizzatore.</span></div>';
   return h;
 }
@@ -1322,7 +1327,7 @@ var VACT={
   terPick:function(b){UI.ter=b.getAttribute("data-v")||"";try{localStorage.setItem("qo-ter",UI.ter)}catch(e){}delete VIEWS.map},
   terOpen:function(){UI.terOpen=!UI.terOpen},
   vWhere:function(){whereAmI()},
-  bAll:function(b){var on=b.getAttribute("data-v")==="1";vignes().filter(inTer).forEach(function(p){if(on)S.botte.sel[p.id]=true;else delete S.botte.sel[p.id]});save()},
+  bAll:function(b){var on=b.getAttribute("data-v")==="1";if(window.QOMac){window.QOMac.setAll(on);save();return}vignes().filter(inTer).forEach(function(p){if(on)S.botte.sel[p.id]=true;else delete S.botte.sel[p.id]});save()},
   mrAdd:function(){readVForm();var f=UI.vedit,n=Math.max(1,Math.min(200,parseInt($("#mrN").value,10)||1)),c=parseInt($("#mrNC").value,10)||0;f.mrows=f.mrows||[];for(var i=0;i<n;i++)f.mrows.push({c:c,len:0})},
   mrDel:function(b){readVForm();UI.vedit.mrows.splice(+b.getAttribute("data-j"),1)},
   vNew:function(){UI.vedit={name:"Parcella "+(vignes().length+1),varieta:"",port:"",anno:today().getFullYear(),forma:"Guyot",inter:2.5,row:0.9,ori:0,L:100,W:50,rmode:"guida",r0:1,mrows:[],ter:terSel(),nrows:0,oriAuto:true};window.scrollTo(0,0)},
@@ -1348,7 +1353,7 @@ function readFileAsText(file,cb){var r=new FileReader();r.onload=function(){cb(S
 function vineChange(t){
   var id=t.id;if(!id)return false;
   if(id==="vwT"||id==="vwRain"||id==="vwShoot"){S.vw[{vwT:"t",vwRain:"rain",vwShoot:"shoot"}[id]]=parseFloat(t.value)||0;if(id!=="vwShoot"&&window.QOMeteo)window.QOMeteo.markManual();save();render();return true}
-  if(id.indexOf("bp-")===0){S.botte.sel[id.slice(3)]=t.checked;save();render();return true}
+  if(id.indexOf("bp-")===0){if(window.QOMac)window.QOMac.toggleCalc(id.slice(3));else S.botte.sel[id.slice(3)]=t.checked;save();render();return true}
   if(id==="bProd"){S.botte.prod=t.value;save();render();return true}
   if(id==="bDose"||id==="bWater"||id==="bTank"||id==="bTit"){S.botte[{bDose:"dose",bWater:"water",bTank:"tank",bTit:"tit"}[id]]=parseFloat(t.value)||0;save();render();return true}
   if(id==="bUnit"){S.botte.unit=t.value;save();render();return true}
@@ -1377,7 +1382,7 @@ function afterRender(){
   if(UI.tab==="mappa"){if(window.QOMap&&window.QOMap.ok()&&$("#lmapSlot"))window.QOMap.mount($("#lmapSlot"));else{drawMap();var s=$("#mapsvg");if(s)bindPan(s,"map",function(pt,e){mapTap(pt,e)})}}
   if(UI.tab==="impianto"){drawImp();var s2=$("#impsvg");if(s2&&ortoSel())bindPan(s2,"imp-"+S.osel,impTap)}
   if(UI.tab==="vigna"&&UI.gedit&&window.QOFil)window.QOFil.after();
-  if(UI.tab==="vigna"){drawVine();var s3=$("#vinesvg");if(s3)bindPan(s3,"vine-"+UI.vsel,vineTap);drawVmap();var s4=$("#vmapsvg");if(s4)bindPan(s4,vmapKey(),vmapTap)}
+  if(UI.tab==="vigna"){drawVine();var s3=$("#vinesvg");if(s3)bindPan(s3,"vine-"+UI.vsel,vineTap);drawVmap();var s4=$("#vmapsvg");if(s4)bindPan(s4,vmapKey(),vmapTap);if(UI.vtab==="botte"&&window.QOMac)window.QOMac.after()}
   if(UI.scrollDet){UI.scrollDet=false;var dt=$("#vdet");if(dt)setTimeout(function(){dt.scrollIntoView({behavior:"smooth",block:"start"})},30)}
 }
 
@@ -1458,7 +1463,7 @@ window.QO={
     if(!S.weather)S.weather={t:14,rh:70,wet:0,rain:0};if(!S.vw)S.vw={t:12,rain:0,shoot:0};if(!S.botte)S.botte={sel:{},prod:"rame",dose:3,unit:"kg",water:500,tank:1000,tit:20};if(!S.cropSel)S.cropSel="lattuga";if(!S.samples)S.samples=[];if(!S.inv)S.inv={items:[],moves:[]};
     UI.vsel=null;UI.vedit=null;UI.gedit=null;UI.fedit=null;UI.zedit=null;UI.cropForm=null;UI.treeSel=null;UI.planForm=null;UI.draw=null;render()},
   /* dati arrivati dal cloud: sostituiscono parcelle, piani, campioni e segni */
-  applyRemote:function(d){if(d.customProducts)S.customProducts=d.customProducts;if(d.customCrops)S.customCrops=d.customCrops;if(d.notes)S.notes=d.notes;if(d.terreni)S.terreni=d.terreni;S.plots=d.plots;S.plans=d.plans;S.samples=d.samples;S.inv=d.inv||{items:[],moves:[]};if(d.meteo){var man=S.meteo&&S.meteo.manual;S.meteo=d.meteo;S.meteo.manual=!!man}S.geo=d.geo||S.geo||null;S.marksMeta=d.marksMeta||{};
+  applyRemote:function(d){if(d.customProducts)S.customProducts=d.customProducts;if(d.customCrops)S.customCrops=d.customCrops;if(d.macchine)S.macchine=d.macchine;if(d.notes)S.notes=d.notes;if(d.terreni)S.terreni=d.terreni;S.plots=d.plots;S.plans=d.plans;S.samples=d.samples;S.inv=d.inv||{items:[],moves:[]};if(d.meteo){var man=S.meteo&&S.meteo.manual;S.meteo=d.meteo;S.meteo.manual=!!man}S.geo=d.geo||S.geo||null;S.marksMeta=d.marksMeta||{};
     if(S.sel&&!plotById(S.sel))S.sel=S.plots[0]&&S.plots[0].id;if(!S.sel&&S.plots[0])S.sel=S.plots[0].id;S.vineInit=true;var had=stripSamples(S);saveLocal();safeRender();if(had)setTimeout(save,300)},
   render:function(){safeRender()},
   saveLocal:function(){saveLocal()},
@@ -1470,7 +1475,7 @@ window.QO={
   isLocal:function(){return KEY===LOCALKEY},
   plotName:function(id){var p=plotById(id);return p?p.name:"appezzamento"},
   /* strumenti per la mappa satellitare (js/mappa.js) */
-  ui:UI,save:function(){save()},plotById:plotById,fillPlot:fill,ortoSel:ortoSel,mapMaxAspect:mapMaxAspect,isWide:isWide,isTree:isTree,mergeCrops:mergeCrops,typeNames:TYPEN,vineGeo:vineGeo,vineGeoGuide:vineGeoGuide,defaultGuide:defaultGuide,straightGuide:straightGuide,guideSmooth:guideSmooth,guidePts:guidePts,guideAngle:guideAngle,simplifyLine:simplifyLine,longestEdgeAngle:longestEdgeAngle,ceppoXY:ceppoXY,rowLine:rowLine,nearestCeppo:nearestCeppo,rowNo:rowNo,vignes:vignes,labelPt:labelPt,terreni:terreni,terById:terById,terSel:terSel,inTer:inTer,natCmp:natCmp,autoTer:autoTer,parseGeoFile:parseGeoFile,ensureGeo:ensureGeo,llToPts:llToPts,importPolys:importPolys,vineDefaults:vineDefaults,vineStats:vineStats,stageOf:stageOf,stageName:function(k){return STN[k]?STN[k][1]:k},readFileAsText:readFileAsText,views:function(){return VIEWS},vdot:vdot,pip:pip,area:area,bbox:bbox,num:num,m2:m2,fmt:fmt,
+  ui:UI,save:function(){save()},plotById:plotById,fillPlot:fill,ortoSel:ortoSel,nameKey:nameKey,bindPan:bindPan,vbOf:vbOf,fitView:fitView,vmapKeyFor:function(k){return k+"-"+(terSel()||"all")},mapMaxAspect:mapMaxAspect,isWide:isWide,isTree:isTree,mergeCrops:mergeCrops,typeNames:TYPEN,vineGeo:vineGeo,vineGeoGuide:vineGeoGuide,defaultGuide:defaultGuide,straightGuide:straightGuide,guideSmooth:guideSmooth,guidePts:guidePts,guideAngle:guideAngle,simplifyLine:simplifyLine,longestEdgeAngle:longestEdgeAngle,ceppoXY:ceppoXY,rowLine:rowLine,nearestCeppo:nearestCeppo,rowNo:rowNo,vignes:vignes,labelPt:labelPt,terreni:terreni,terById:terById,terSel:terSel,inTer:inTer,natCmp:natCmp,autoTer:autoTer,parseGeoFile:parseGeoFile,ensureGeo:ensureGeo,llToPts:llToPts,importPolys:importPolys,vineDefaults:vineDefaults,vineStats:vineStats,stageOf:stageOf,stageName:function(k){return STN[k]?STN[k][1]:k},readFileAsText:readFileAsText,views:function(){return VIEWS},vdot:vdot,pip:pip,area:area,bbox:bbox,num:num,m2:m2,fmt:fmt,
   typeName:TYPEN,stroke:STROKE,fill:FILL,
   setMark:function(plotId,key,state){var p=plotById(plotId);if(!p||!p.vine)return;if(state)p.vine.marks[key]=state;else delete p.vine.marks[key];save();render()}
 };
@@ -1504,6 +1509,7 @@ load();var navY=navRestore();render();if(navY)setTimeout(function(){window.scrol
 <script src="js/bancali.js"></script>
 <script src="js/colture.js"></script>
 <script src="js/alberi.js"></script>
+<script src="js/macchine.js"></script>
 <script>
 if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
 </script>
