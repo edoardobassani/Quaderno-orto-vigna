@@ -132,6 +132,8 @@
 
   window.QOProd = {
     headHtml: headHtml, cardExtra: cardExtra,
-    isOpen: function (k) { return V.open === k; }
+    isOpen: function (k) { return V.open === k; },
+    hasForm: function () { return !!V.form; },
+    closeForm: function () { V.form = null; V.confirm = null; }
   };
 })();

@@ -552,6 +552,11 @@
     replace: replace, barbHtml: barbHtml, barbOptions: barbOptions, scanCode: scanCode,
     alertsList: function () { return alerts().map(function (a) { return { lvl: a.lvl, t: a.t, d: a.d, id: a.it.id }; }); },
     open: function (id) { V.item = id; V.form = null; V.inv = null; V.unknown = null; },
+    /* per la navigazione: articolo aperto e categoria scelta; i moduli aperti si chiudono con "indietro" */
+    loc: function () { return V.item || V.cat ? { item: V.item || null, cat: V.cat || "" } : null; },
+    setLoc: function (l) { V.item = l && l.item ? l.item : null; V.cat = l && l.cat ? l.cat : ""; V.form = null; V.inv = null; V.unknown = null; V.confirm = null; },
+    hasForm: function () { return !!(V.form || V.inv || V.unknown); },
+    closeForm: function () { V.form = null; V.inv = null; V.unknown = null; V.confirm = null; },
     alertsCount: function () { return alerts().filter(function (a) { return a.lvl === 2; }).length; }
   };
   seed();

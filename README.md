@@ -147,6 +147,12 @@ Le mappe delle parcelle si ingrandiscono con due dita (o con la rotella del mous
 
 Il meteo per ora è unico per tutta l'azienda.
 
+## Muoversi nell'app
+
+- **Tasto indietro** in alto a sinistra, accanto alla nuvola: torna alla schermata di prima (sezione e scheda aperta, alla stessa altezza della pagina). Se è aperta una schermata di modifica (forma, direzione dei filari, zona dell'albero, un modulo), la chiude senza salvare. Funziona anche il tasto indietro del telefono; nella schermata iniziale, premendolo due volte si esce.
+- La barra in alto (indietro, nuvola, microfono, **Aa**) resta sempre visibile mentre scorri.
+- **Riaprendo l'app** (anche se l'hai chiusa per sbaglio) riparti dall'ultima schermata aperta, con la stessa scheda e alla stessa altezza; le schermate di modifica non si riaprono.
+
 ## Orto
 
 L'orto è separato dalla vigna: nella sezione Orto compaiono solo serre, tunnel e campi di pieno campo, con una scelta propria dell'appezzamento. Le parcelle di vigna si gestiscono solo in Vigna. Nella Mappa, scegliendo un appezzamento, il pulsante porta all'orto o alla vigna a seconda del tipo.

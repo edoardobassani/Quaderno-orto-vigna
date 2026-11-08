@@ -37,7 +37,9 @@ img{max-width:100%}
 .syncbar{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px 0}
 .syncbar button{display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:0 12px;border-radius:18px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 14px var(--f-body);cursor:pointer;max-width:100%}
 .syncbar button span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.syncbar{position:sticky;top:0;z-index:30;background:var(--bg);padding-bottom:6px;box-shadow:0 0 0 100vmax var(--bg);clip-path:inset(0 -100vmax)}
 .syncbar .cloudbtn{position:relative;width:44px;height:44px;padding:0;justify-content:center;border-radius:22px}
+.syncbar .backbtn[aria-disabled="true"]{opacity:.4}
 .syncbar .cloudbtn svg{width:24px;height:24px}
 .syncbar .cloudbtn .syncdot{position:absolute;right:7px;bottom:8px;width:12px;height:12px;border-radius:6px;border:2px solid var(--surface)}
 .syncdot{width:10px;height:10px;border-radius:5px;flex-shrink:0;background:var(--ink-2)}
@@ -64,7 +66,7 @@ img{max-width:100%}
   --ink:#E7ECE3; --ink-2:#A9B5AA; --accent:#7CC08B; --accent-ink:#0F1A12;
   --serra:#8EC3DA; --serra-fill:#21404D; --campo-fill:#2C4527; --tunnel-fill:#352F4D; --tunnel:#B9AEE6; --vigna-fill:#45283A; --vigna:#E3A1C0;
   --soil:#5E4630; --soil-2:#76593D; --warn:#F2B35C; --warn-bg:#3D2C12; --bad:#F2918A; --bad-bg:#45201D; --ok-bg:#24381F; color-scheme:dark }
-html,body{height:100%}
+html{height:100%}body{min-height:100%}/* body senza altezza fissa: così la barra in alto resta ferma mentre si scorre */
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45}
 *{box-sizing:border-box}
 .app{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 90px}
@@ -147,7 +149,7 @@ a{color:var(--serra)}
 
 </head>
 <body>
-<div class="syncbar"><div class="row" style="flex-wrap:nowrap;justify-content:space-between;gap:8px"><span id="syncbar" style="min-width:0;display:flex"></span><span class="row" style="flex-wrap:nowrap;gap:6px;flex-shrink:0"><button type="button" id="micBtn" data-vo="mic" aria-label="Comando vocale o nota dettata" style="flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button><button type="button" id="zoomBtn" data-act="zoomOpen" aria-label="Dimensione di testi e riquadri" aria-haspopup="true" style="font-family:var(--f-display);font-weight:800;flex-shrink:0">Aa</button></span></div><div id="zoomPop" hidden></div></div>
+<div class="syncbar"><div class="row" style="flex-wrap:nowrap;justify-content:space-between;gap:8px"><span class="row" style="flex-wrap:nowrap;gap:8px;min-width:0"><button type="button" id="backBtn" class="cloudbtn backbtn" data-nav="back" aria-label="Indietro" title="Indietro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button><span id="syncbar" style="min-width:0;display:flex"></span></span><span class="row" style="flex-wrap:nowrap;gap:6px;flex-shrink:0"><button type="button" id="micBtn" data-vo="mic" aria-label="Comando vocale o nota dettata" style="flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button><button type="button" id="zoomBtn" data-act="zoomOpen" aria-label="Dimensione di testi e riquadri" aria-haspopup="true" style="font-family:var(--f-display);font-weight:800;flex-shrink:0">Aa</button></span></div><div id="zoomPop" hidden></div></div>
 <div class="app" id="app"></div>
 <div class="sheet" id="acct" hidden></div>
 <nav class="nav" aria-label="Sezioni"><div id="nav"></div></nav>
@@ -495,7 +497,69 @@ function renderNav(){
   var due=S.plans.filter(function(p){var d=nextDue(p);return d&&d<=today()}).length;
   $("#nav").innerHTML=TABS.map(function(t){return '<a href="#" data-tab="'+t[0]+'" aria-label="'+TABN[t[0]]+'" title="'+TABN[t[0]]+'"'+(UI.tab===t[0]?' aria-current="page"':'')+'>'+ICON[t[0]]+(t[0]==="trattamenti"&&due?' <span class="badge b-warn">'+due+'</span>':'')+(t[0]==="magazzino"&&window.QOInv&&window.QOInv.alertsCount()?' <span class="badge b-bad">'+window.QOInv.alertsCount()+'</span>':'')+'</a>'}).join("");
 }
-function render(){mergeCustom();mergeCrops();renderNav();renderZoomPop();var a=$("#app");if(UI.fedit&&window.QOForma){a.innerHTML=window.QOForma.html();afterRender();return}if(UI.zedit&&window.QOAlb){a.innerHTML=window.QOAlb.zoneHtml();afterRender();return}a.innerHTML=({oggi:vOggi,mappa:vMappa,impianto:vImpianto,vigna:vVigna,trattamenti:vTratt,magazzino:function(){return window.QOInv?window.QOInv.view():'<div class="top"><h1>Magazzino</h1></div><div class="panel">Caricamento…</div>'},libreria:vLib})[UI.tab]();afterRender()}
+function render(){mergeCustom();mergeCrops();renderNav();renderZoomPop();var a=$("#app");if(UI.fedit&&window.QOForma){a.innerHTML=window.QOForma.html();afterRender();return}if(UI.zedit&&window.QOAlb){a.innerHTML=window.QOAlb.zoneHtml();afterRender();return}a.innerHTML=({oggi:vOggi,mappa:vMappa,impianto:vImpianto,vigna:vVigna,trattamenti:vTratt,magazzino:function(){return window.QOInv?window.QOInv.view():'<div class="top"><h1>Magazzino</h1></div><div class="panel">Caricamento…</div>'},libreria:vLib})[UI.tab]();afterRender();navTrack()}
+/* ---------- navigazione: ultima schermata aperta e tasto indietro ----------
+   Una "schermata" è la sezione con la scheda aperta (parcella, albero, articolo del magazzino…).
+   A ogni render, se la schermata cambia, quella di prima va nella pila (con la posizione dello scorrimento).
+   La pila e l'ultima schermata si salvano in localStorage (qo-nav): riaprendo l'app si riparte da lì.
+   Le schermate di modifica (forma, direzione, zona dell'albero, moduli) non si riaprono: "indietro" le chiude senza salvare. */
+var NAV={cur:null,stack:[],restoring:false},NAVK="qo-nav";
+function navLoc(){
+  var l={tab:UI.tab};
+  if(UI.tab==="vigna"){l.vtab=UI.vtab||"parcelle";if(UI.vsel)l.vsel=UI.vsel}
+  if(UI.tab==="impianto"){if(S.osel)l.osel=S.osel;if(UI.treeSel)l.tree=UI.treeSel}
+  if(UI.tab==="magazzino"&&window.QOInv&&window.QOInv.loc){var il=window.QOInv.loc();if(il)l.inv=il}
+  return l;
+}
+function navEditor(){
+  var sh=document.querySelector('.sheet:not([hidden]) [data-sa="close"],.sheet:not([hidden]) [data-vo="close"]');if(sh)return function(){sh.click()};
+  if(UI.zoomOpen)return function(){UI.zoomOpen=false};
+  if(UI.zedit&&window.QOAlb)return function(){window.QOAlb.zoneClose()};
+  if(UI.fedit&&window.QOForma)return function(){window.QOForma.close()};
+  if(UI.gedit&&window.QOFil)return function(){window.QOFil.close()};
+  if(UI.cropForm)return function(){UI.cropForm=null};
+  if(UI.bedForm)return function(){UI.bedForm=null};
+  if(UI.vedit)return function(){UI.vedit=null};
+  if(UI.planForm)return function(){UI.planForm=null};
+  if(UI.draw)return function(){UI.draw=null};
+  if(window.QOInv&&window.QOInv.hasForm&&UI.tab==="magazzino"&&window.QOInv.hasForm())return function(){window.QOInv.closeForm()};
+  if(window.QOProd&&window.QOProd.hasForm&&window.QOProd.hasForm())return function(){window.QOProd.closeForm()};
+  return null;
+}
+function navSave(){try{localStorage.setItem(NAVK,JSON.stringify({cur:NAV.cur,y:Math.round(window.scrollY||0),stack:NAV.stack.slice(-30)}))}catch(e){}}
+function navTrack(){
+  var k=JSON.stringify(navLoc());
+  if(k!==NAV.cur){if(NAV.cur&&!NAV.restoring){NAV.stack.push({k:NAV.cur,y:NAV.y||0});if(NAV.stack.length>40)NAV.stack.shift()}NAV.cur=k;navSave()}
+  NAV.restoring=false;navArm();
+  var b=$("#backBtn");if(b)b.setAttribute("aria-disabled",String(!NAV.stack.length&&!navEditor()&&UI.tab==="oggi"));
+}
+function navApply(l){
+  UI.tab=l.tab||"oggi";UI.confirm=null;
+  if(l.tab==="vigna"){UI.vtab=l.vtab||"parcelle";UI.vsel=l.vsel&&plotById(l.vsel)?l.vsel:null}
+  if(l.tab==="impianto"){if(l.osel&&plotById(l.osel))S.osel=l.osel;UI.treeSel=l.tree||null}
+  if(l.tab==="magazzino"&&window.QOInv&&window.QOInv.setLoc)window.QOInv.setLoc(l.inv||null);
+  if(l.tab!=="magazzino"&&window.QOInv&&window.QOInv.setLoc)window.QOInv.setLoc(null);
+}
+function navBack(){
+  var ed=navEditor();
+  if(ed){ed();render();return}
+  var e=NAV.stack.pop();
+  if(!e){if(UI.tab!=="oggi"){NAV.restoring=true;navApply({tab:"oggi"});render();window.scrollTo(0,0);navSave()}else toast("Sei già nella schermata iniziale");return}
+  var l;try{l=JSON.parse(e.k)}catch(x){l={tab:"oggi"}}
+  NAV.restoring=true;navApply(l);render();window.scrollTo(0,e.y||0);navSave();
+}
+/* ricorda la posizione dello scorrimento della schermata corrente */
+window.addEventListener("scroll",function(){NAV.y=Math.round(window.scrollY||0)},{passive:true});
+document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden")navSave()});
+window.addEventListener("pagehide",navSave);
+/* tasto indietro del telefono (Android): una voce in più nella cronologia del browser, rimessa a ogni pressione */
+function navArm(){try{if(!history.state||!history.state.qo)history.pushState({qo:1},"")}catch(e){}}
+window.addEventListener("popstate",function(){var can=NAV.stack.length||navEditor()||UI.tab!=="oggi";if(can){navBack();navArm()}else toast("Premi ancora indietro per uscire")});
+document.addEventListener("click",function(e){var b=e.target.closest('[data-nav="back"]');if(!b)return;e.preventDefault();navBack()});
+function navRestore(){
+  try{var r=JSON.parse(localStorage.getItem(NAVK)||"null");if(!r||!r.cur)return null;var l=JSON.parse(r.cur);
+    NAV.stack=(r.stack||[]).filter(function(x){return x&&x.k});NAV.cur=r.cur;NAV.restoring=true;navApply(l);return r.y||0}catch(e){return null}
+}
 
 var FILL={serra:"var(--serra-fill)",campo:"var(--campo-fill)",tunnel:"var(--tunnel-fill)",vigna:"var(--vigna-fill)",frutteto:"var(--campo-fill)"};
 var STROKE={serra:"var(--serra)",campo:"var(--accent)",tunnel:"var(--tunnel)",vigna:"var(--vigna)",frutteto:"var(--warn)"};
@@ -1346,7 +1410,7 @@ applyZoom(getZoom());
 
 document.addEventListener("input",function(e){if(e.target&&e.target.id==="vSearch"){UI.vq=e.target.value;var pos=e.target.selectionStart;render();var el=$("#vSearch");if(el){el.focus();try{el.setSelectionRange(pos,pos)}catch(_){}}}});
 document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.target.id==="vSearch"){e.preventDefault();var q=(UI.vq||"").trim().toLowerCase(),m=vignes().filter(inTer).filter(function(p){return q&&plotMatch(p,q)});if(m.length===1){UI.vsel=m[0].id;S.sel=m[0].id;UI.scrollDet=true;e.target.blur();save();render()}else if(!m.length)toast("Nessuna parcella trovata")}});
-load();render();
+load();var navY=navRestore();render();if(navY)setTimeout(function(){window.scrollTo(0,navY)},60);try{history.replaceState({qo:0},"")}catch(e){}navArm();
 })();
 </script>
 <script type="module" src="js/sync.js"></script>
