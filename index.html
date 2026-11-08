@@ -938,7 +938,12 @@ function whereAmI(){
     toast(inP?"Sei in "+p.name+" (±"+acc+" m)":"Non sei dentro una parcella: la più vicina è "+p.name+", a "+Math.round(d)+" m");
   },function(e){toast(e.code===1?"Permesso di posizione negato: attivalo nelle impostazioni del browser":"Posizione non trovata, riprova all'aperto")},{enableHighAccuracy:true,timeout:20000,maximumAge:5000});
 }
-function natCmp(a,b){return String(a.name).localeCompare(String(b.name),"it",{numeric:true,sensitivity:"base"})}
+/* ordine dei nomi per numero: "T.1", "T. 2", "T. 5 N", "T. 5 S", "T.6 E" … "T. 43" (contano il primo numero e poi quello che segue,
+   così spazi e punti diversi nei nomi non cambiano l'ordine); i nomi senza numero vanno in fondo, in ordine alfabetico */
+function nameKey(n){var m=String(n||"").match(/(\d+(?:[.,]\d+)?)(.*)$/);return m?{n:parseFloat(m[1].replace(",",".")),rest:m[2].replace(/[\s.]+/g," ").trim()}:null}
+function natCmp(a,b){var A=nameKey(a.name),B=nameKey(b.name),c=function(x,y){return String(x).localeCompare(String(y),"it",{numeric:true,sensitivity:"base"})};
+  if(A&&B)return A.n-B.n||c(A.rest,B.rest)||c(a.name,b.name);if(A)return -1;if(B)return 1;return c(a.name,b.name)}
+function vOrd(){if(!UI.vord){try{UI.vord=localStorage.getItem("qo-vord")||"num"}catch(e){UI.vord="num"}}return UI.vord}
 function terBar(){if(!terreni().length)return "";var t=terSel();return '<div class="row" role="group" aria-label="Terreno" style="margin-bottom:10px;gap:6px">'+[["","Tutti"]].concat(terreni().map(function(x){return [x.id,x.name]})).map(function(x){return '<button class="chip" data-act="terPick" data-v="'+x[0]+'" aria-pressed="'+(t===x[0])+'">'+esc(x[1])+'</button>'}).join("")+'</div>'}
 var VC={};
 function vdot(a,b){return a[0]*b[0]+a[1]*b[1]}
@@ -1179,9 +1184,16 @@ function vParcelle(){
   pre+='<div class="row" style="flex-wrap:nowrap;gap:6px;margin-bottom:8px"><input id="vSearch" type="search" enterkeyhint="search" autocomplete="off" placeholder="Cerca: 12, Poggio…" aria-label="Cerca parcella" value="'+esc(UI.vq||"")+'" style="flex:1;min-width:0"><button class="btn sm" data-act="vWhere" style="white-space:nowrap">'+ICON.pin+' Dove sono</button></div>';
   if(all.length>1)pre+='<div class="mapwrap" style="margin-bottom:10px"><svg id="vmapsvg" role="img" aria-label="Mappa delle parcelle: tocca una parcella per aprirla"></svg><div class="zoom"><button data-act="zin" data-k="'+vmapKey()+'" aria-label="Ingrandisci">+</button><button data-act="zout" data-k="'+vmapKey()+'" aria-label="Riduci">−</button><button data-act="zfit" data-k="'+vmapKey()+'" aria-label="Adatta">⤢</button></div></div>';
   if(q&&!vs.length)return pre+'<div class="panel small">Nessuna parcella corrisponde a «'+esc(UI.vq)+'».</div>';
-  var h=pre+'<div class="list">',grp=!terSel()&&terreni().length,lastT=null;
-  if(grp)vs.sort(function(a,b){var ia=terreni().indexOf(terById(a.ter)),ib=terreni().indexOf(terById(b.ter));ia=ia<0?99:ia;ib=ib<0?99:ib;return ia-ib||natCmp(a,b)});
-  vs.forEach(function(p){var st=vineStats(p),sg=stageOf(p);if(grp&&(p.ter||"")!==lastT){lastT=p.ter||"";var tt=terById(lastT);h+='<div class="small muted" style="margin:8px 0 2px;font-weight:700">'+(tt?esc(tt.name):'Senza terreno')+'</div>'}h+='<button class="item" data-act="vSel" data-id="'+p.id+'"'+(UI.vsel===p.id?' aria-current="true"':'')+'><span class="swatch" style="background:var(--vigna-fill);border-color:var(--vigna)"></span><span class="grow"><b>'+esc(p.name)+'</b><br><span class="muted small">'+esc(p.vine.varieta||"varietà da indicare")+' · '+num(st.ha,2)+' ha · '+st.filari+(st.filari===1?' filare · ':' filari · ')+st.ceppi.toLocaleString("it-IT")+' ceppi'+(st.f?' · '+st.f+' fall.':'')+'</span></span>'+(sg?'<span class="badge b-n">'+STN[sg.st][1]+'</span>':'')+'</button>'});
+  /* elenco: per numero, oppure raggruppato per varietà (scelta ricordata sul dispositivo); con più terreni, prima per terreno */
+  var byVar=vOrd()==="var",vk=function(p){return (p.vine.varieta||"").trim()},vName=function(p){return vk(p)||"Varietà da indicare"};
+  pre+='<div class="row" role="group" aria-label="Ordine delle parcelle" style="gap:6px;margin-bottom:6px"><span class="small muted">Ordina:</span><button class="btn sm" data-act="vOrd" data-v="num" aria-pressed="'+!byVar+'">Per numero</button><button class="btn sm" data-act="vOrd" data-v="var" aria-pressed="'+byVar+'">Per varietà</button></div>';
+  var h=pre+'<div class="list">',grp=!terSel()&&terreni().length,lastT=null,lastV=null;
+  var tIdx=function(p){var i=terreni().indexOf(terById(p.ter));return i<0?99:i};
+  vs.sort(function(a,b){return (grp?tIdx(a)-tIdx(b):0)||(byVar?((vk(a)?0:1)-(vk(b)?0:1)||vk(a).localeCompare(vk(b),"it",{sensitivity:"base"})):0)||natCmp(a,b)});
+  /* riepilogo di un gruppo di varietà: quante parcelle, ettari e ceppi */
+  var vSum=function(t,v){var g=vs.filter(function(q){return (!grp||(q.ter||"")===t)&&vName(q)===v}),ha=0,ce=0;g.forEach(function(q){var s=vineStats(q);ha+=s.ha;ce+=s.ceppi});return g.length+(g.length===1?' parcella':' parcelle')+' · '+num(ha,2)+' ha · '+ce.toLocaleString("it-IT")+' ceppi'};
+  vs.forEach(function(p){var st=vineStats(p),sg=stageOf(p);if(grp&&(p.ter||"")!==lastT){lastT=p.ter||"";lastV=null;var tt=terById(lastT);h+='<div class="small muted" style="margin:8px 0 2px;font-weight:700">'+(tt?esc(tt.name):'Senza terreno')+'</div>'}
+    if(byVar&&vName(p)!==lastV){lastV=vName(p);h+='<div class="row" style="justify-content:space-between;margin:10px 0 2px"><b style="color:var(--vigna)">'+esc(lastV)+'</b><span class="small muted">'+vSum(p.ter||"",lastV)+'</span></div>'}h+='<button class="item" data-act="vSel" data-id="'+p.id+'"'+(UI.vsel===p.id?' aria-current="true"':'')+'><span class="swatch" style="background:var(--vigna-fill);border-color:var(--vigna)"></span><span class="grow"><b>'+esc(p.name)+'</b><br><span class="muted small">'+esc(p.vine.varieta||"varietà da indicare")+' · '+num(st.ha,2)+' ha · '+st.filari+(st.filari===1?' filare · ':' filari · ')+st.ceppi.toLocaleString("it-IT")+' ceppi'+(st.f?' · '+st.f+' fall.':'')+'</span></span>'+(sg?'<span class="badge b-n">'+STN[sg.st][1]+'</span>':'')+'</button>'});
   h+='</div>';
   var p=plotById(UI.vsel);if(!p)return h;var st=vineStats(p),V=p.vine,sg=stageOf(p);
   h+='<div class="row" id="vdet" style="justify-content:space-between;margin:16px 0 8px;scroll-margin-top:12px"><h2>'+esc(p.name)+'</h2><div class="row" style="gap:6px"><button class="btn sm" data-act="fOpen">Forma</button>'+(V.rmode!=="man"?'<button class="btn sm" data-act="gOpen">Direzione</button>':'')+'<button class="btn sm" data-act="vEdit">Modifica dati</button></div></div>';
@@ -1306,6 +1318,7 @@ var VACT={
   vOpen:function(b,id){UI.tab="vigna";UI.vtab="parcelle";UI.vsel=id},
   vTab:function(b){UI.vtab=b.getAttribute("data-v");UI.vedit=null;if(window.QOFil)window.QOFil.close()},
   vSel:function(b,id){UI.vsel=id;S.sel=id;UI.scrollDet=true;save()},
+  vOrd:function(b){UI.vord=b.getAttribute("data-v");try{localStorage.setItem("qo-vord",UI.vord)}catch(e){}},
   terPick:function(b){UI.ter=b.getAttribute("data-v")||"";try{localStorage.setItem("qo-ter",UI.ter)}catch(e){}delete VIEWS.map},
   terOpen:function(){UI.terOpen=!UI.terOpen},
   vWhere:function(){whereAmI()},

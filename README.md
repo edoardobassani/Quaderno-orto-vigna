@@ -153,6 +153,14 @@ Il meteo per ora è unico per tutta l'azienda.
 - La barra in alto (indietro, nuvola, microfono, **Aa**) resta sempre visibile mentre scorri.
 - **Riaprendo l'app** (anche se l'hai chiusa per sbaglio) riparti dall'ultima schermata aperta, con la stessa scheda e alla stessa altezza; le schermate di modifica non si riaprono.
 
+## Ordine delle parcelle
+
+In Vigna → Parcelle, sopra l'elenco, *Ordina*:
+- **Per numero**: le terrazze vanno in ordine di numero (T.1, T. 2 … T. 5 N, T. 5 S … T. 43), anche se i nomi sono scritti in modi diversi (con o senza spazio o punto). I nomi senza numero vanno in fondo.
+- **Per varietà**: le parcelle sono raggruppate per varietà, con quante parcelle, ettari e ceppi ha ogni varietà; dentro ogni gruppo restano in ordine di numero. Quelle senza varietà vanno in fondo, in "Varietà da indicare".
+
+Con più terreni (e nessun terreno scelto) l'elenco resta diviso prima per terreno. La scelta resta ricordata sul telefono. Lo stesso ordine per numero vale in tutti gli elenchi (Oggi, Botte, Orto…).
+
 ## Sul PC
 
 L'app si apre anche dal computer (Chrome o Edge), allo stesso indirizzo; con il cloud vedi gli stessi dati del telefono. Quando la finestra è larga (da 1024 pixel in su, anche un tablet in orizzontale) l'impaginazione cambia da sola:
