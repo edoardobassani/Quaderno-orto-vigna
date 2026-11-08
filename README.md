@@ -131,8 +131,14 @@ Se l'azienda è su più corpi separati, in **Vigna → Terreni e confini** crei 
 - **Confine**: dà gli ettari aziendali. Si importa da file (KML, GPX, GeoJSON), si disegna sulla mappa o si registra camminando col GPS. Con "Assegna le parcelle dentro il confine" le parcelle già presenti finiscono nel terreno giusto.
 - **Importa confine e terrazze**: un file con tante forme apre un riepilogo. La forma più grande che contiene le altre è proposta come confine, le altre come terrazze; puoi cambiare ogni voce o ignorarla. Se reimporti lo stesso file, le terrazze con lo stesso nome vengono solo aggiornate nella forma.
 - **Numero di filari**: se lo scrivi in "Modifica dati", l'app li distribuisce sulla larghezza della parcella e calcola la distanza tra filari. Lasciato vuoto, li calcola dalla distanza.
-- **Orientamento**: di base i filari sono paralleli al lato più lungo della parcella. Le parcelle che avevano già segni sui ceppi mantengono l'orientamento che avevano, per non spostare i segni.
-- **Filari di ogni terrazza** (in "Modifica dati"): *dritti e paralleli* con l'orientamento che scegli, *lungo la terrazza* (seguono la curva, quanti ne stanno con la distanza tra filari), oppure *inseriti a mano*, filare per filare con il numero di ceppi. Puoi scegliere da che numero parte la numerazione dei filari.
+- **Direzione dei filari** (pulsante *Direzione* nella scheda della parcella): indichi un *filare guida* e l'app copia gli altri accanto, alla distanza tra filari, tagliandoli sulla forma della parcella. Il filare guida si indica in tre modi:
+  - **Disegna**: tocca *Traccia di nuovo* e passa il dito lungo un filare, poi trascina i punti arancioni per correggerlo (toccando la linea aggiungi un punto). *Raddrizza* lo rende dritto;
+  - **Cammina**: tocca *Inizia a camminare*, percorri un filare dall'inizio alla fine e tocca *Fine filare*. I punti presi fuori dalla parcella non contano. Dopo puoi correggerlo col dito;
+  - **Gira**: per le parcelle dritte, ruoti i filari con la barra (o di un grado alla volta) finché combaciano; *Lato più lungo* li mette paralleli al lato più lungo.
+
+  Mentre lo modifichi vedi subito quanti filari e ceppi risultano. Il filare 1 è quello disegnato più spesso; *Inverti numerazione* lo sposta sull'altro lato. Se la parcella ha già segni sui ceppi, l'app avvisa prima di salvare: i segni restano sugli stessi numeri ma finirebbero su ceppi diversi.
+- Le parcelle nuove partono con un filare guida che segue la forma della terrazza. Quelle create prima di questa versione mantengono i loro filari finché non apri *Direzione* e salvi.
+- **Filari di ogni terrazza** (in "Modifica dati"): *copiati dal filare guida* oppure *inseriti a mano*, filare per filare con il numero di ceppi. Puoi scegliere da che numero parte la numerazione dei filari.
 
 Le mappe delle parcelle si ingrandiscono con due dita (o con la rotella del mouse).
 

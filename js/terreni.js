@@ -30,7 +30,7 @@
       if (inside >= (ps.length - 1) / 2) big.role = "confine";
     }
     var ts = Q.terreni(), def = fromTer || Q.terSel() || (ts.length ? ts[0].id : "new");
-    UI().imp = { file: fname, polys: ps, ter: def, newName: ts.length ? "Terreno " + (ts.length + 1) : "Terreno principale", varieta: "", inter: 2.5, row: 0.9, rmode: "curva" };
+    UI().imp = { file: fname, polys: ps, ter: def, newName: ts.length ? "Terreno " + (ts.length + 1) : "Terreno principale", varieta: "", inter: 2.5, row: 0.9, rmode: "guida" };
     UI().tab = "vigna"; UI().vtab = "parcelle"; UI().vedit = null;
     window.scrollTo(0, 0); Q.render();
   }
@@ -50,7 +50,7 @@
     var tid = I.ter === "new" ? null : I.ter, upd = tid ? terr.filter(function (p) { return plotsOf(tid).some(function (x) { return x.vine && sameName(x.name, p.name); }); }).length : 0;
     var h = '<div class="panel stack" style="border:2px solid var(--vigna)"><h2>Importa da ' + esc(I.file) + '</h2><span class="small muted">' + I.polys.length + ' forme trovate. Controlla cosa è ciascuna: la più grande che contiene le altre è proposta come confine.</span>';
     h += '<div class="grid2"><label class="f">Terreno<select id="imTer">' + ts.map(function (t) { return '<option value="' + t.id + '"' + (I.ter === t.id ? ' selected' : '') + '>' + esc(t.name) + '</option>'; }).join("") + '<option value="new"' + (I.ter === "new" ? ' selected' : '') + '>+ Nuovo terreno</option></select></label>' + (I.ter === "new" ? '<label class="f">Nome del nuovo terreno<input id="imNew" value="' + esc(I.newName) + '"></label>' : '<span></span>') + '</div>';
-    if (terr.length) h += '<div class="sep"></div><h3>Dati delle nuove terrazze</h3><div class="grid2"><label class="f">Varietà<input id="imVar" value="' + esc(I.varieta) + '" placeholder="si può cambiare dopo"></label><label class="f">Filari<select id="imMode">' + [["curva", "Lungo la terrazza (automatici)"], ["auto", "Dritti e paralleli"], ["man", "Inseriti a mano dopo"]].map(function (x) { return '<option value="' + x[0] + '"' + (I.rmode === x[0] ? ' selected' : '') + '>' + x[1] + '</option>'; }).join("") + '</select></label><label class="f">Distanza tra filari (m)<input id="imInter" type="number" inputmode="decimal" step="0.05" value="' + I.inter + '"></label><label class="f">Distanza sulla fila (m)<input id="imRow" type="number" inputmode="decimal" step="0.05" value="' + I.row + '"></label></div>';
+    if (terr.length) h += '<div class="sep"></div><h3>Dati delle nuove terrazze</h3><div class="grid2"><label class="f">Varietà<input id="imVar" value="' + esc(I.varieta) + '" placeholder="si può cambiare dopo"></label><label class="f">Filari<select id="imMode">' + [["guida", "Seguono la forma della terrazza"], ["man", "Inseriti a mano dopo"]].map(function (x) { return '<option value="' + x[0] + '"' + (I.rmode === x[0] ? ' selected' : '') + '>' + x[1] + '</option>'; }).join("") + '</select></label><label class="f">Distanza tra filari (m)<input id="imInter" type="number" inputmode="decimal" step="0.05" value="' + I.inter + '"></label><label class="f">Distanza sulla fila (m)<input id="imRow" type="number" inputmode="decimal" step="0.05" value="' + I.row + '"></label></div>';
     h += '<div class="sep"></div><div class="row" style="justify-content:space-between"><h3>Forme</h3><span class="small muted">' + conf + ' confine · ' + terr.length + ' terrazze</span></div>';
     h += '<div class="stack" style="gap:6px">' + I.polys.map(function (p, j) { return '<div class="row" style="flex-wrap:nowrap;gap:6px"><input id="imN-' + j + '" value="' + esc(p.name) + '" aria-label="Nome" style="flex:1;min-width:0"><span class="small muted mono" style="width:66px;text-align:right">' + (p.m2 >= 5000 ? ha(p.m2) : Math.round(p.m2) + ' m²') + '</span><select id="imR-' + j + '" aria-label="Tipo di ' + esc(p.name) + '" style="width:auto">' + [["terrazza", "Terrazza"], ["confine", "Confine"], ["ignora", "Ignora"]].map(function (x) { return '<option value="' + x[0] + '"' + (p.role === x[0] ? ' selected' : '') + '>' + x[1] + '</option>'; }).join("") + '</select></div>'; }).join("") + '</div>';
     if (upd) h += '<span class="small" style="color:var(--warn)">' + upd + ' terrazze hanno lo stesso nome di parcelle già presenti in questo terreno: ne aggiorno solo la forma, segni e dati restano.</span>';
@@ -71,10 +71,10 @@
       var pts = Q.llToPts(pp.ll); if (pts.length < 3 || Q.area(pts) < 1) return;
       var ex = st.plots.find(function (x) { return x.vine && x.ter === t.id && sameName(x.name, pp.name); });
       if (ex) { ex.pts = pts; delete views["vine-" + ex.id]; updated++; return; }
-      st.plots.push({ id: Q.uid(), name: pp.name, type: "vigna", pts: pts, plants: [], ter: t.id, vine: Q.vineDefaults({ varieta: I.varieta, inter: I.inter, row: I.row, rmode: I.rmode === "man" ? "curva" : I.rmode }) });
+      st.plots.push({ id: Q.uid(), name: pp.name, type: "vigna", pts: pts, plants: [], ter: t.id, vine: Q.vineDefaults({ varieta: I.varieta, inter: I.inter, row: I.row, rmode: I.rmode === "man" ? "guida" : I.rmode }) });
       made++;
     });
-    if (I.rmode === "man") Q.toast("Le terrazze partono con i filari lungo la terrazza: in ognuna scegli \"Inseriti a mano\" per scriverli");
+    if (I.rmode === "man") Q.toast("Le terrazze partono con i filari che seguono la terrazza: in ognuna scegli \"Inseriti a mano\" per scriverli");
     UI().imp = null; UI().ter = t.id; try { localStorage.setItem("qo-ter", t.id); } catch (e) {}
     delete views.map; Q.save();
     Q.toast([confs.length ? "confine " + ha(Q.area(t.pts)) : "", made ? made + (made === 1 ? " terrazza nuova" : " terrazze nuove") : "", updated ? updated + (updated === 1 ? " aggiornata" : " aggiornate") : ""].filter(Boolean).join(", ") + " in " + t.name);

@@ -718,7 +718,7 @@ function vOggi(){
 var STAGES=[["riposo","Riposo vegetativo",0],["germ","Germogliamento",9],["foglie","Foglie distese",15],["grapp","Grappoli visibili",53],["fior","Piena fioritura",65],["alleg","Allegagione",71],["chius","Chiusura grappolo",79],["invai","Invaiatura",83],["matur","Maturazione",89],["cadu","Caduta foglie",93]];
 var STN={};STAGES.forEach(function(s){STN[s[0]]=s});
 var FORME=["Guyot","Cordone speronato","Alberello","Pergola","Doppio capovolto","Altro"];
-function vineDefaults(o){o=o||{};return {varieta:o.varieta||"",port:o.port||"",anno:+o.anno||new Date().getFullYear(),forma:o.forma||"Guyot",inter:+o.inter||2.5,row:+o.row||0.9,ori:o.ori==null||o.ori===""?0:+o.ori,barb:o.barb||"",rmode:o.rmode||"auto",r0:+o.r0||1,nrows:+o.nrows||0,oriAuto:o.oriAuto!=null?!!o.oriAuto:(o.ori==null||o.ori===""),mrows:(o.mrows||[]).map(function(r){return {c:+r.c||0,len:+r.len||0}}),marks:{},phen:[]}}
+function vineDefaults(o){o=o||{};return {varieta:o.varieta||"",port:o.port||"",anno:+o.anno||new Date().getFullYear(),forma:o.forma||"Guyot",inter:+o.inter||2.5,row:+o.row||0.9,ori:o.ori==null||o.ori===""?0:+o.ori,barb:o.barb||"",rmode:o.rmode||"guida",r0:+o.r0||1,nrows:+o.nrows||0,oriAuto:o.oriAuto!=null?!!o.oriAuto:(o.ori==null||o.ori===""),mrows:(o.mrows||[]).map(function(r){return {c:+r.c||0,len:+r.len||0}}),guida:o.guida||null,grev:!!o.grev,marks:{},phen:[]}}
 function vignes(){return S.plots.filter(function(p){return p.type==="vigna"&&p.vine})}
 /* ---- terreni (corpi aziendali separati) ---- */
 function terreni(){return S.terreni||(S.terreni=[])}
@@ -772,8 +772,8 @@ function vineGeo(p){
   var V=p.vine,mode=V.rmode||"auto";
   /* parcelle già esistenti: orientamento automatico solo se non hanno ancora segni sui ceppi (così i segni non si spostano) */
   if(V.oriAuto==null)V.oriAuto=!Object.keys(V.marks||{}).length;
-  var key=JSON.stringify([p.pts,V.inter,V.row,V.ori,mode,mode==="man"?V.mrows:0,+V.nrows||0,!!V.oriAuto]);if(VC[p.id]&&VC[p.id].key===key)return VC[p.id];
-  var g=mode==="auto"?vineGeoStraight(p):vineGeoCurve(p,mode);g.key=key;g.mode=mode;VC[p.id]=g;return g;
+  var key=JSON.stringify([p.pts,V.inter,V.row,V.ori,mode,mode==="man"?V.mrows:0,+V.nrows||0,!!V.oriAuto,mode==="guida"?[V.guida||0,!!V.grev]:0]);if(VC[p.id]&&VC[p.id].key===key)return VC[p.id];
+  var g=mode==="auto"?vineGeoStraight(p):mode==="guida"?vineGeoGuide(p):vineGeoCurve(p,mode);g.key=key;g.mode=mode;VC[p.id]=g;return g;
 }
 /* filari dritti e paralleli, con orientamento dato */
 /* direzione del lato più lungo, in gradi da Nord (0–179) */
@@ -815,6 +815,84 @@ function vineGeoCurve(p,mode){
     rows.push({segs:segs});tot+=c;len+=man&&+man[j].len>0?+man[j].len:(c?L:0);
   }
   return {d:d,n:n,rows:rows,inter:N?W/N:inter,rw:rw,ceppi:tot,len:len,curve:true,width:W};
+}
+/* ---- filari copiati da un filare guida ----
+   Il filare guida è una linea (dritta o curva) disegnata col dito, camminata col GPS o ruotata a vista.
+   Gli altri filari sono copie parallele alla distanza tra filari, tagliate dalla forma della parcella.
+   Conta solo la forma della linea, non dove si trova: i filari partono sempre da un bordo della parcella. */
+function guidePts(V){return (V.guida||[]).map(function(q){return Array.isArray(q)?q:[+q.x,+q.y]}).filter(function(q){return isFinite(q[0])&&isFinite(q[1])})}
+/* linea morbida che passa per i punti (Catmull-Rom), con punti ogni mezzo metro circa */
+function guideSmooth(c){
+  if(c.length<2)return c.slice();var out=[c[0]];
+  for(var i=0;i<c.length-1;i++){var p0=c[Math.max(0,i-1)],p1=c[i],p2=c[i+1],p3=c[Math.min(c.length-1,i+2)],L=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]),n=c.length===2?1:Math.max(1,Math.min(60,Math.ceil(L/0.5)));
+    for(var k=1;k<=n;k++){var t=k/n,t2=t*t,t3=t2*t;out.push([0,1].map(function(j){return 0.5*(2*p1[j]+(-p0[j]+p2[j])*t+(2*p0[j]-5*p1[j]+4*p2[j]-p3[j])*t2+(-p0[j]+3*p1[j]-3*p2[j]+p3[j])*t3)}))}}
+  return out;
+}
+/* filare guida predefinito: la linea di mezzo della terrazza (segue la forma), ridotta a pochi punti */
+function defaultGuide(p){var tv=Object.assign({},p.vine,{nrows:1}),g=vineGeoCurve({id:"_d",pts:p.pts,vine:tv},"curva"),r=g.rows[0],poly=r&&r.segs[0]?r.segs[0].poly:null;
+  if(!poly||poly.length<2){var b=bbox(p.pts);return [[b.x0,(b.y0+b.y1)/2],[b.x1,(b.y0+b.y1)/2]]}
+  /* ai capi la linea di mezzo piega verso gli angoli: si tolgono i due capi (una larghezza) e il resto lo fa il prolungamento */
+  var cum=[0];for(var i=1;i<poly.length;i++)cum.push(cum[i-1]+Math.hypot(poly[i][0]-poly[i-1][0],poly[i][1]-poly[i-1][1]));var L=cum[cum.length-1],cut=Math.min(g.width||0,L/4),mid=poly.filter(function(q,i){return cum[i]>=cut&&cum[i]<=L-cut});if(mid.length<2)mid=poly;
+  return simplifyLine(mid,Math.max(0.3,L/300))}
+/* toglie i punti superflui (Douglas-Peucker): resta la forma, con meno punti da trascinare */
+function simplifyLine(pts,tol){if(pts.length<3)return pts.slice();var keep=new Array(pts.length);keep[0]=keep[pts.length-1]=true;
+  (function rec(a,b){var A=pts[a],B=pts[b],dx=B[0]-A[0],dy=B[1]-A[1],L=Math.hypot(dx,dy)||1e-9,md=-1,mi=-1;for(var i=a+1;i<b;i++){var d=Math.abs(dy*pts[i][0]-dx*pts[i][1]+B[0]*A[1]-B[1]*A[0])/L;if(d>md){md=d;mi=i}}if(md>tol){keep[mi]=true;rec(a,mi);rec(mi,b)}})(0,pts.length-1);
+  return pts.filter(function(q,i){return keep[i]}).map(function(q){return [Math.round(q[0]*100)/100,Math.round(q[1]*100)/100]})}
+/* filare guida dritto, con un angolo in gradi da Nord, lungo quanto la parcella */
+function straightGuide(pts,deg){var th=deg*Math.PI/180,d=[Math.sin(th),-Math.cos(th)],c=[0,0];pts.forEach(function(q){c[0]+=q[0]/pts.length;c[1]+=q[1]/pts.length});var ts=pts.map(function(q){return vdot([q[0]-c[0],q[1]-c[1]],d)}),a=Math.min.apply(null,ts),b=Math.max.apply(null,ts);
+  return [[c[0]+a*d[0],c[1]+a*d[1]],[c[0]+b*d[0],c[1]+b*d[1]]].map(function(q){return [Math.round(q[0]*100)/100,Math.round(q[1]*100)/100]})}
+/* angolo in gradi da Nord (0–179) fra il primo e l'ultimo punto */
+function guideAngle(c){if(c.length<2)return 0;var a=c[0],b=c[c.length-1],t=Math.atan2(b[0]-a[0],-(b[1]-a[1]))*180/Math.PI;return Math.round(((t%180)+180)%180)}
+function vineGeoGuide(p,ctrl){
+  var V=p.vine,inter=Math.max(0.5,+V.inter||2.5),rw=Math.max(0.2,+V.row||0.9),P=p.pts;
+  ctrl=ctrl||guidePts(V);if(ctrl.length<2)ctrl=defaultGuide(p);
+  var G=guideSmooth(ctrl).filter(function(q,i,a){return !i||Math.hypot(q[0]-a[i-1][0],q[1]-a[i-1][1])>1e-3});
+  if(G.length<2)G=straightGuide(P,longestEdgeAngle(P));
+  /* allunga la linea ai due capi continuando la sua curva, così copre tutta la parcella anche se è stata tracciata più corta */
+  var b=bbox(P),E=Math.hypot(b.x1-b.x0,b.y1-b.y0)+20;
+  function ext(line){/* line: dal capo verso l'interno. La curvatura si stima sugli ultimi 40 m (o metà linea), con direzioni prese su 5 m per non seguire il tremolio */
+    var cum=[0];for(var i=1;i<line.length;i++)cum.push(cum[i-1]+Math.hypot(line[i][0]-line[i-1][0],line[i][1]-line[i-1][1]));
+    var Lt=cum[cum.length-1],span=Math.min(40,Lt/2),w=Math.min(5,span/2);
+    function at(d){var j=1;while(j<cum.length-1&&cum[j]<d)j++;var u=cum[j]>cum[j-1]?(d-cum[j-1])/(cum[j]-cum[j-1]):0;return [line[j-1][0]+u*(line[j][0]-line[j-1][0]),line[j-1][1]+u*(line[j][1]-line[j-1][1])]}
+    function hd(d){var a=at(d+w),c=at(d);return Math.atan2(c[1]-a[1],c[0]-a[0])}
+    var h0=hd(0),kap=0;if(span>w*1.5){var h1=hd(span-w),dh=h0-h1;while(dh>Math.PI)dh-=2*Math.PI;while(dh<-Math.PI)dh+=2*Math.PI;kap=dh/(span-w)}
+    var lim=1/40;kap=Math.max(-lim,Math.min(lim,kap));
+    var out=[],x=line[0][0],y=line[0][1],h=h0,turn=0;
+    for(var d=0;d<E;d+=1){if(Math.abs(turn)<Math.PI/2){h+=kap;turn+=kap}x+=Math.cos(h);y+=Math.sin(h);out.push([x,y])}
+    return out.reverse();}
+  G=ext(G).concat(G,ext(G.slice().reverse()).reverse());
+  /* normali in ogni punto (media dei due tratti vicini) */
+  var N=G.map(function(q,i){var a=G[Math.max(0,i-1)],c=G[Math.min(G.length-1,i+1)],dx=c[0]-a[0],dy=c[1]-a[1],L=Math.hypot(dx,dy)||1;return [-dy/L,dx/L]});
+  /* distanza con segno di ogni vertice della parcella dalla linea: dà la larghezza da coprire */
+  function sdist(pt){var best=1e18,sg=0;for(var i=0;i<G.length-1;i++){var a=G[i],c=G[i+1],dx=c[0]-a[0],dy=c[1]-a[1],L2=dx*dx+dy*dy||1e-9,u=Math.max(0,Math.min(1,((pt[0]-a[0])*dx+(pt[1]-a[1])*dy)/L2)),qx=a[0]+u*dx,qy=a[1]+u*dy,d=Math.hypot(pt[0]-qx,pt[1]-qy);if(d<best){best=d;sg=(dx*(pt[1]-a[1])-dy*(pt[0]-a[0]))>=0?1:-1}}return best*sg}
+  var ss=P.map(sdist),smin=Math.min.apply(null,ss),smax=Math.max.apply(null,ss);
+  if(+V.nrows>0)inter=Math.max(0.2,(smax-smin)/Math.round(+V.nrows));
+  var offs=[];for(var s=smin+inter/2;s<smax-1e-6&&offs.length<2000;s+=inter)offs.push(s);
+  if(V.grev)offs.reverse();
+  var rows=[],tot=0,len=0;
+  offs.forEach(function(s){
+    /* copia della linea spostata di s; i punti dove la copia torna indietro (curve strette) si saltano */
+    var o=[];for(var i=0;i<G.length;i++){var q=[G[i][0]+N[i][0]*s,G[i][1]+N[i][1]*s];if(o.length&&i>0){var l=o[o.length-1],gx=G[i][0]-G[i-1][0],gy=G[i][1]-G[i-1][1];if((q[0]-l[0])*gx+(q[1]-l[1])*gy<=0)continue}o.push(q)}
+    var segs=clipLine(o,P).filter(function(pc){return pc.length>1}).map(function(pc){var cum=[0];for(var q=1;q<pc.length;q++)cum.push(cum[q-1]+Math.hypot(pc[q][0]-pc[q-1][0],pc[q][1]-pc[q-1][1]));var L=cum[cum.length-1],c=Math.floor(L/rw);return {poly:pc,cum:cum,L:L,c:c,off:rw/2,sp:rw}}).filter(function(sg){return sg.c>=4});
+    rows.push({segs:segs});
+  });
+  /* filari vuoti ai bordi (strisce troppo sottili) si tolgono, così la numerazione parte dal primo filare vero */
+  while(rows.length&&!rows[0].segs.length)rows.shift();while(rows.length&&!rows[rows.length-1].segs.length)rows.pop();
+  rows.forEach(function(r){r.segs.forEach(function(sg){tot+=sg.c;len+=sg.L})});
+  return {rows:rows,inter:inter,rw:rw,ceppi:tot,len:len,curve:true,guide:true};
+}
+/* tiene solo i pezzi di una linea che stanno dentro il poligono; le brevi uscite (meno di gap metri) non spezzano il filare */
+function clipLine(line,P,gap){
+  var sub=[];gap=gap==null?3:gap;
+  for(var i=0;i<line.length-1;i++){var a=line[i],b=line[i+1],ts=[0,1];
+    for(var j=0;j<P.length;j++){var c=P[j],d=P[(j+1)%P.length],rx=b[0]-a[0],ry=b[1]-a[1],sx=d[0]-c[0],sy=d[1]-c[1],den=rx*sy-ry*sx;if(Math.abs(den)<1e-12)continue;var t=((c[0]-a[0])*sy-(c[1]-a[1])*sx)/den,u=((c[0]-a[0])*ry-(c[1]-a[1])*rx)/den;if(t>0&&t<1&&u>=0&&u<=1)ts.push(t)}
+    ts.sort(function(x,y){return x-y});
+    for(var k=0;k<ts.length-1;k++){var t0=ts[k],t1=ts[k+1];if(t1-t0<1e-9)continue;var tm=(t0+t1)/2,p0=[a[0]+(b[0]-a[0])*t0,a[1]+(b[1]-a[1])*t0],p1=[a[0]+(b[0]-a[0])*t1,a[1]+(b[1]-a[1])*t1];
+      sub.push({a:p0,b:p1,L:Math.hypot(p1[0]-p0[0],p1[1]-p0[1]),inn:pip([a[0]+(b[0]-a[0])*tm,a[1]+(b[1]-a[1])*tm],P)})}}
+  /* uscite brevi fra due tratti dentro: si considerano dentro */
+  for(var q=0;q<sub.length;){if(sub[q].inn){q++;continue}var r=q,L=0;while(r<sub.length&&!sub[r].inn){L+=sub[r].L;r++}if(q>0&&r<sub.length&&L<gap)for(var z=q;z<r;z++)sub[z].inn=true;q=r}
+  var out=[],cur=null;sub.forEach(function(sg){if(sg.inn){if(!cur){cur=[sg.a];out.push(cur)}cur.push(sg.b)}else cur=null});
+  return out;
 }
 /* posizione del ceppo i (da 0) del tratto k del filare r */
 function ceppoXY(g,r,k,i){var sg=g.rows[r].segs[k],t=sg.off+i*sg.sp;
@@ -886,10 +964,10 @@ function vVigna(){
 }
 function vFormHtml(){
   var f0=UI.vedit,pp0=f0.id&&plotById(f0.id);f0.autoN=null;f0.autoOri=null;f0.realInter=null;
-  if(pp0&&f0.rmode!=="man"){var tv=Object.assign({},pp0.vine,{inter:f0.inter,row:f0.row,ori:f0.ori,nrows:0,oriAuto:f0.oriAuto}),tp={id:"_t",pts:pp0.pts,vine:tv},gf=function(){return f0.rmode==="curva"?vineGeoCurve(tp,"curva"):vineGeoStraight(tp)};
+  if(pp0&&f0.rmode!=="man"){var tv=Object.assign({},pp0.vine,{inter:f0.inter,row:f0.row,ori:f0.ori,nrows:0,oriAuto:f0.oriAuto,grev:f0.grev}),tp={id:"_t",pts:pp0.pts,vine:tv},gf=function(){return f0.rmode==="curva"?vineGeoCurve(tp,"curva"):f0.rmode==="guida"?vineGeoGuide(tp,f0.guida&&f0.guida.length>1?guidePts({guida:f0.guida}):null):vineGeoStraight(tp)};
     f0.autoN=gf().rows.filter(function(r){return r.segs.length}).length;f0.autoOri=longestEdgeAngle(pp0.pts);if(+f0.nrows>0){tv.nrows=f0.nrows;f0.realInter=gf().inter}}
   var f=UI.vedit,isNew=!f.id,h='<div class="panel stack" style="border:2px solid var(--vigna)"><h2>'+(isNew?'Nuova parcella':'Dati della parcella')+'</h2>';
-  h+='<div class="grid2"><label class="f">Nome<input id="vfName" value="'+esc(f.name)+'"></label><label class="f">Varietà<input id="vfVar" value="'+esc(f.varieta)+'" placeholder="es. Sangiovese"></label><label class="f">Portinnesto<input id="vfPort" value="'+esc(f.port)+'" placeholder="es. 1103 Paulsen"></label><label class="f">Anno d\'impianto<input id="vfAnno" type="number" inputmode="numeric" value="'+f.anno+'"></label><label class="f">Forma di allevamento<select id="vfForma">'+FORME.map(function(x){return '<option'+(x===f.forma?' selected':'')+'>'+x+'</option>'}).join("")+'</select></label><label class="f">Filari<select id="vfMode">'+[["auto","Dritti e paralleli"],["curva","Lungo la terrazza (automatici)"],["man","Inseriti a mano"]].map(function(x){return '<option value="'+x[0]+'"'+((f.rmode||"auto")===x[0]?' selected':'')+'>'+x[1]+'</option>'}).join("")+'</select></label><label class="f">Numero del primo filare<input id="vfR0" type="number" inputmode="numeric" value="'+(f.r0||1)+'"></label>'+(terreni().length?'<label class="f">Terreno<select id="vfTer"><option value="">Nessuno</option>'+terreni().map(function(t){return '<option value="'+t.id+'"'+(f.ter===t.id?' selected':'')+'>'+esc(t.name)+'</option>'}).join("")+'</select></label>':'')+((f.rmode||"auto")!=="man"?'<label class="f">Numero di filari<input id="vfNRows" type="number" inputmode="numeric" min="0" value="'+(+f.nrows>0?f.nrows:'')+'" placeholder="automatico'+(f.autoN?' ('+f.autoN+')':'')+'"></label>':'')+((f.rmode||"auto")==="auto"?'<label class="f" style="grid-column:1/-1;flex-direction:row;align-items:center;gap:8px"><input id="vfOriAuto" type="checkbox"'+(f.oriAuto?' checked':'')+' style="width:auto"> Filari paralleli al lato più lungo'+(f.autoOri!=null?' ('+num(f.autoOri,0)+'° da Nord)':'')+'</label>'+(f.oriAuto?'':'<label class="f">Orientamento filari (° da Nord)<input id="vfOri" type="number" inputmode="numeric" value="'+f.ori+'"></label>'):'')+'<label class="f">Distanza tra filari (m)<input id="vfInter" type="number" inputmode="decimal" step="0.05" value="'+(+f.nrows>0&&f.rmode!=="man"&&f.realInter?Math.round(f.realInter*100)/100:f.inter)+'"'+(+f.nrows>0&&f.rmode!=="man"?' disabled':'')+'>'+(+f.nrows>0&&f.rmode!=="man"&&f.realInter?'<span class="small muted">con '+f.nrows+' filari risulta '+num(f.realInter,2)+' m</span>':'')+'</label><label class="f">Distanza sulla fila (m)<input id="vfRow" type="number" inputmode="decimal" step="0.05" value="'+f.row+'"></label>'+(window.QOInv?'<label class="f" style="grid-column:1/-1">Barbatelle per i rimpiazzi<select id="vfBarb">'+window.QOInv.barbOptions(f.barb)+'</select></label>':'')+'</div>';
+  h+='<div class="grid2"><label class="f">Nome<input id="vfName" value="'+esc(f.name)+'"></label><label class="f">Varietà<input id="vfVar" value="'+esc(f.varieta)+'" placeholder="es. Sangiovese"></label><label class="f">Portinnesto<input id="vfPort" value="'+esc(f.port)+'" placeholder="es. 1103 Paulsen"></label><label class="f">Anno d\'impianto<input id="vfAnno" type="number" inputmode="numeric" value="'+f.anno+'"></label><label class="f">Forma di allevamento<select id="vfForma">'+FORME.map(function(x){return '<option'+(x===f.forma?' selected':'')+'>'+x+'</option>'}).join("")+'</select></label><label class="f">Filari<select id="vfMode">'+[["guida","Copiati dal filare guida"],["man","Inseriti a mano"]].concat(f.rmode==="auto"?[["auto","Dritti, con i gradi (vecchio modo)"]]:f.rmode==="curva"?[["curva","Lungo la terrazza (vecchio modo)"]]:[]).map(function(x){return '<option value="'+x[0]+'"'+((f.rmode||"auto")===x[0]?' selected':'')+'>'+x[1]+'</option>'}).join("")+'</select></label><label class="f">Numero del primo filare<input id="vfR0" type="number" inputmode="numeric" value="'+(f.r0||1)+'"></label>'+(terreni().length?'<label class="f">Terreno<select id="vfTer"><option value="">Nessuno</option>'+terreni().map(function(t){return '<option value="'+t.id+'"'+(f.ter===t.id?' selected':'')+'>'+esc(t.name)+'</option>'}).join("")+'</select></label>':'')+((f.rmode||"auto")!=="man"?'<label class="f">Numero di filari<input id="vfNRows" type="number" inputmode="numeric" min="0" value="'+(+f.nrows>0?f.nrows:'')+'" placeholder="automatico'+(f.autoN?' ('+f.autoN+')':'')+'"></label>':'')+(f.rmode==="guida"?'<div style="grid-column:1/-1" class="row"><button class="btn sm" data-act="gOpen">Direzione dei filari</button><span class="small muted">'+(f.guida&&f.guida.length?(f.guida.length===2?'filare guida dritto':'filare guida curvo'):'segue la forma della terrazza')+'</span></div>':'')+((f.rmode||"auto")==="auto"?'<label class="f" style="grid-column:1/-1;flex-direction:row;align-items:center;gap:8px"><input id="vfOriAuto" type="checkbox"'+(f.oriAuto?' checked':'')+' style="width:auto"> Filari paralleli al lato più lungo'+(f.autoOri!=null?' ('+num(f.autoOri,0)+'° da Nord)':'')+'</label>'+(f.oriAuto?'':'<label class="f">Orientamento filari (° da Nord)<input id="vfOri" type="number" inputmode="numeric" value="'+f.ori+'"></label>'):'')+'<label class="f">Distanza tra filari (m)<input id="vfInter" type="number" inputmode="decimal" step="0.05" value="'+(+f.nrows>0&&f.rmode!=="man"&&f.realInter?Math.round(f.realInter*100)/100:f.inter)+'"'+(+f.nrows>0&&f.rmode!=="man"?' disabled':'')+'>'+(+f.nrows>0&&f.rmode!=="man"&&f.realInter?'<span class="small muted">con '+f.nrows+' filari risulta '+num(f.realInter,2)+' m</span>':'')+'</label><label class="f">Distanza sulla fila (m)<input id="vfRow" type="number" inputmode="decimal" step="0.05" value="'+f.row+'"></label>'+(window.QOInv?'<label class="f" style="grid-column:1/-1">Barbatelle per i rimpiazzi<select id="vfBarb">'+window.QOInv.barbOptions(f.barb)+'</select></label>':'')+'</div>';
   if(f.rmode==="man"){
     var mr=f.mrows||[],tc=mr.reduce(function(a,r){return a+(+r.c||0)},0);
     h+='<div class="sep"></div><div class="row" style="justify-content:space-between"><h3>Filari a mano</h3><span class="small muted">'+mr.length+' filari · '+tc.toLocaleString("it-IT")+' ceppi</span></div><span class="small muted">I filari vengono disposti lungo la terrazza nell\'ordine dell\'elenco: il primo è quello più a monte o più a valle, a seconda di come numerate voi.</span>';
@@ -909,6 +987,7 @@ function vFormHtml(){
 }
 function vParcelle(){
   if(UI.imp&&window.QOTer)return window.QOTer.wizardHtml();
+  if(UI.gedit&&window.QOFil)return window.QOFil.html();
   if(UI.vedit)return vFormHtml();
   var vs=vignes().filter(inTer).sort(natCmp);
   var pre='<div class="row" style="margin-bottom:10px"><button class="btn sm" data-act="terOpen" aria-pressed="'+!!UI.terOpen+'">Terreni e confini</button><label class="btn sm filebtn" for="terFileAll">Importa confine e terrazze<input id="terFileAll" type="file" accept=".gpx,.kml,.geojson,.json"></label></div>';
@@ -925,11 +1004,11 @@ function vParcelle(){
   vs.forEach(function(p){var st=vineStats(p),sg=stageOf(p);if(grp&&(p.ter||"")!==lastT){lastT=p.ter||"";var tt=terById(lastT);h+='<div class="small muted" style="margin:8px 0 2px;font-weight:700">'+(tt?esc(tt.name):'Senza terreno')+'</div>'}h+='<button class="item" data-act="vSel" data-id="'+p.id+'"'+(UI.vsel===p.id?' aria-current="true"':'')+'><span class="swatch" style="background:var(--vigna-fill);border-color:var(--vigna)"></span><span class="grow"><b>'+esc(p.name)+'</b><br><span class="muted small">'+esc(p.vine.varieta||"varietà da indicare")+' · '+num(st.ha,2)+' ha · '+st.filari+(st.filari===1?' filare · ':' filari · ')+st.ceppi.toLocaleString("it-IT")+' ceppi'+(st.f?' · '+st.f+' fall.':'')+'</span></span>'+(sg?'<span class="badge b-n">'+STN[sg.st][1]+'</span>':'')+'</button>'});
   h+='</div>';
   var p=plotById(UI.vsel);if(!p)return h;var st=vineStats(p),V=p.vine,sg=stageOf(p);
-  h+='<div class="row" id="vdet" style="justify-content:space-between;margin:16px 0 8px;scroll-margin-top:12px"><h2>'+esc(p.name)+'</h2><button class="btn sm" data-act="vEdit">Modifica dati</button></div>';
+  h+='<div class="row" id="vdet" style="justify-content:space-between;margin:16px 0 8px;scroll-margin-top:12px"><h2>'+esc(p.name)+'</h2><div class="row" style="gap:6px">'+(V.rmode!=="man"?'<button class="btn sm" data-act="gOpen">Direzione</button>':'')+'<button class="btn sm" data-act="vEdit">Modifica dati</button></div></div>';
   h+='<div class="row" style="margin-bottom:8px">'+[["vista","Vista"],["f","Segna fallanza"],["s","Segna sintomi"],["n","Rimpiazza"],["ok","Togli segno"]].map(function(m){return '<button class="btn sm" data-act="vMode" data-m="'+m[0]+'" aria-pressed="'+(UI.vmode===m[0])+'">'+m[1]+'</button>'}).join("")+'</div>';
   h+='<div class="mapwrap"><svg id="vinesvg" role="img" aria-label="Filari e ceppi della parcella"></svg><div class="zoom"><button data-act="zin" data-k="vine-'+p.id+'" aria-label="Ingrandisci">+</button><button data-act="zout" data-k="vine-'+p.id+'" aria-label="Rimpicciolisci">−</button><button data-act="zfit" data-k="vine-'+p.id+'" aria-label="Adatta" style="font-size:13px">⤢</button></div><div class="hint">'+(UI.vmode==="vista"?'Allarga con due dita per vedere i ceppi, tocca un ceppo per sapere filare e numero.':'Tocca un ceppo per '+(UI.vmode==="f"?'segnarlo come fallanza':UI.vmode==="s"?'segnare sintomi':UI.vmode==="n"?'segnarlo come rimpiazzato con una barbatella nuova':'togliere il segno')+'.')+'</div></div>';
   h+='<div class="panel stack" style="margin-top:10px"><div class="kv"><div><span>Superficie</span><b>'+num(st.ha,2)+' ha</b></div><div><span>Filari</span><b>'+st.filari+'</b></div><div><span>Ceppi</span><b>'+st.ceppi.toLocaleString("it-IT")+'</b></div><div><span>Ceppi/ha</span><b>'+Math.round(st.dens).toLocaleString("it-IT")+'</b></div><div><span>Metri di filare</span><b>'+Math.round(st.len).toLocaleString("it-IT")+'</b></div><div><span>Sesto</span><b>'+num(V.inter,2)+' × '+num(V.row,2)+'</b></div></div>';
-  h+='<div class="sep"></div><div class="small">'+esc(V.varieta||"Varietà non indicata")+(V.port?' su '+esc(V.port):'')+' · '+esc(V.forma)+' · impianto '+V.anno+' · '+(V.rmode==="man"?'filari inseriti a mano':V.rmode==="curva"?'filari lungo la terrazza':V.oriAuto?'filari paralleli al lato lungo ('+num(vineGeo(p).ori,0)+'°)':'filari a '+V.ori+'° da Nord')+((+V.r0||1)!==1?' · numerati da '+V.r0:'')+(p.ter&&terById(p.ter)?' · '+esc(terById(p.ter).name):'')+'</div>';
+  h+='<div class="sep"></div><div class="small">'+esc(V.varieta||"Varietà non indicata")+(V.port?' su '+esc(V.port):'')+' · '+esc(V.forma)+' · impianto '+V.anno+' · '+(V.rmode==="man"?'filari inseriti a mano':V.rmode==="guida"?(guidePts(V).length===2?'filari dritti a '+guideAngle(guidePts(V))+'° da Nord':'filari copiati dal filare guida'):V.rmode==="curva"?'filari lungo la terrazza':V.oriAuto?'filari paralleli al lato lungo ('+num(vineGeo(p).ori,0)+'°)':'filari a '+V.ori+'° da Nord')+((+V.r0||1)!==1?' · numerati da '+V.r0:'')+(p.ter&&terById(p.ter)?' · '+esc(terById(p.ter).name):'')+'</div>';
   h+='<div class="row"><span class="badge '+(st.f?'b-bad':'b-n')+'">'+st.f+' fallanze</span><span class="badge '+(st.s?'b-warn':'b-n')+'">'+st.s+' con sintomi</span><span class="badge '+(st.n?'b-ok':'b-n')+'">'+st.n+' rimpiazzati</span></div>';
   if(window.QOInv)h+=window.QOInv.barbHtml(p,st);
   h+='</div>';
@@ -1045,7 +1124,7 @@ function readVForm(){var f=UI.vedit;if(!f)return;var g=function(i){var el=$(i);r
 function contentBottom(){var ex=[];S.plots.forEach(function(p){ex=ex.concat(p.pts)});return ex.length?bbox(ex):{x0:0,y1:-6}}
 var VACT={
   vOpen:function(b,id){UI.tab="vigna";UI.vtab="parcelle";UI.vsel=id},
-  vTab:function(b){UI.vtab=b.getAttribute("data-v");UI.vedit=null},
+  vTab:function(b){UI.vtab=b.getAttribute("data-v");UI.vedit=null;if(window.QOFil)window.QOFil.close()},
   vSel:function(b,id){UI.vsel=id;S.sel=id;UI.scrollDet=true;save()},
   terPick:function(b){UI.ter=b.getAttribute("data-v")||"";try{localStorage.setItem("qo-ter",UI.ter)}catch(e){}delete VIEWS.map},
   terOpen:function(){UI.terOpen=!UI.terOpen},
@@ -1053,12 +1132,13 @@ var VACT={
   bAll:function(b){var on=b.getAttribute("data-v")==="1";vignes().filter(inTer).forEach(function(p){if(on)S.botte.sel[p.id]=true;else delete S.botte.sel[p.id]});save()},
   mrAdd:function(){readVForm();var f=UI.vedit,n=Math.max(1,Math.min(200,parseInt($("#mrN").value,10)||1)),c=parseInt($("#mrNC").value,10)||0;f.mrows=f.mrows||[];for(var i=0;i<n;i++)f.mrows.push({c:c,len:0})},
   mrDel:function(b){readVForm();UI.vedit.mrows.splice(+b.getAttribute("data-j"),1)},
-  vNew:function(){UI.vedit={name:"Parcella "+(vignes().length+1),varieta:"",port:"",anno:today().getFullYear(),forma:"Guyot",inter:2.5,row:0.9,ori:0,L:100,W:50,rmode:"auto",r0:1,mrows:[],ter:terSel(),nrows:0,oriAuto:true};window.scrollTo(0,0)},
-  vEdit:function(){var p=plotById(UI.vsel),V=p.vine;UI.vedit={id:p.id,name:p.name,varieta:V.varieta,port:V.port,anno:V.anno,forma:V.forma,inter:V.inter,row:V.row,ori:V.ori,barb:V.barb||"",rmode:V.rmode||"auto",r0:V.r0||1,nrows:+V.nrows||0,oriAuto:!!V.oriAuto,mrows:(V.mrows||[]).map(function(r){return {c:r.c,len:r.len}}),ter:p.ter||""};window.scrollTo(0,0)},
+  vNew:function(){UI.vedit={name:"Parcella "+(vignes().length+1),varieta:"",port:"",anno:today().getFullYear(),forma:"Guyot",inter:2.5,row:0.9,ori:0,L:100,W:50,rmode:"guida",r0:1,mrows:[],ter:terSel(),nrows:0,oriAuto:true};window.scrollTo(0,0)},
+  vEdit:function(){var p=plotById(UI.vsel),V=p.vine;UI.vedit={id:p.id,name:p.name,varieta:V.varieta,port:V.port,anno:V.anno,forma:V.forma,inter:V.inter,row:V.row,ori:V.ori,barb:V.barb||"",rmode:V.rmode||"auto",r0:V.r0||1,nrows:+V.nrows||0,oriAuto:!!V.oriAuto,mrows:(V.mrows||[]).map(function(r){return {c:r.c,len:r.len}}),guida:V.guida||null,grev:!!V.grev,ter:p.ter||""};window.scrollTo(0,0)},
   vCancel:function(){UI.vedit=null},
+  gOpen:function(){if(UI.vedit)readVForm();if(!window.QOFil){toast("Schermata non ancora caricata, riprova");return false}window.QOFil.open(UI.vedit?UI.vedit.id:UI.vsel);window.scrollTo(0,0)},
   vCreateRect:function(){readVForm();var f=UI.vedit;if(!(f.L>0&&f.W>0)){toast("Inserisci lunghezza e larghezza");return false}var bb=contentBottom(),p={id:uid(),name:f.name,type:"vigna",pts:rect(bb.x0,bb.y1+6,f.L,f.W),plants:[],vine:vineDefaults(f)};if(f.ter)p.ter=f.ter;S.plots.push(p);UI.vsel=p.id;S.sel=p.id;UI.vedit=null;delete VIEWS.map;save();toast("Parcella creata: "+num(f.L*f.W/1e4,2)+" ha")},
   vCreateDraw:function(){readVForm();UI.pendingVine=UI.vedit;UI.vedit=null;UI.tab="mappa";UI.draw={pts:[],closed:false,name:UI.pendingVine.name,type:"vigna",ter:UI.pendingVine.ter||""};var bb=contentBottom();if(bb.x1!=null)fitView("map",{x0:bb.x0,y0:bb.y0,x1:bb.x1+40,y1:bb.y1+40},6);toast("Tocca i vertici della parcella sulla mappa")},
-  vSave:function(){readVForm();var f=UI.vedit,p=plotById(f.id);p.name=f.name;["varieta","port","anno","forma","inter","row","ori","barb","rmode","r0","nrows","oriAuto"].forEach(function(k){p.vine[k]=f[k]});p.vine.mrows=(f.mrows||[]).map(function(r){return {c:r.c,len:r.len}});if(f.ter!=null){if(f.ter)p.ter=f.ter;else delete p.ter}delete VIEWS["vine-"+p.id];UI.vedit=null;save();toast("Parcella aggiornata")},
+  vSave:function(){readVForm();var f=UI.vedit,p=plotById(f.id);p.name=f.name;["varieta","port","anno","forma","inter","row","ori","barb","rmode","r0","nrows","oriAuto","guida","grev"].forEach(function(k){if(f[k]!==undefined)p.vine[k]=f[k]});p.vine.mrows=(f.mrows||[]).map(function(r){return {c:r.c,len:r.len}});if(f.ter!=null){if(f.ter)p.ter=f.ter;else delete p.ter}delete VIEWS["vine-"+p.id];UI.vedit=null;save();toast("Parcella aggiornata")},
   vDel:function(){if(UI.confirm!=="vdel"){UI.confirm="vdel";return}var id=UI.vedit.id;S.plans=S.plans.filter(function(x){return x.plot!==id});S.samples=(S.samples||[]).filter(function(x){return x.plot!==id});S.plots=S.plots.filter(function(x){return x.id!==id});UI.vedit=null;UI.confirm=null;UI.vsel=null;delete VIEWS.map;save()},
   vMode:function(b){UI.vmode=b.getAttribute("data-m")},
   vPhenAdd:function(){var p=plotById(UI.vsel),st=$("#vStage").value,d=$("#vStageDate").value||iso(today());p.vine.phen.push({st:st,date:d});p.vine.phen.sort(function(a,b){return a.date<b.date?-1:1});save();toast(STN[st][1]+" registrato")},
@@ -1100,6 +1180,7 @@ function vineChange(t){
 function afterRender(){
   if(UI.tab==="mappa"){if(window.QOMap&&window.QOMap.ok()&&$("#lmapSlot"))window.QOMap.mount($("#lmapSlot"));else{drawMap();var s=$("#mapsvg");if(s)bindPan(s,"map",function(pt,e){mapTap(pt,e)})}}
   if(UI.tab==="impianto"){drawImp();var s2=$("#impsvg");if(s2)bindPan(s2,"imp-"+S.sel,impTap)}
+  if(UI.tab==="vigna"&&UI.gedit&&window.QOFil)window.QOFil.after();
   if(UI.tab==="vigna"){drawVine();var s3=$("#vinesvg");if(s3)bindPan(s3,"vine-"+UI.vsel,vineTap);drawVmap();var s4=$("#vmapsvg");if(s4)bindPan(s4,vmapKey(),vmapTap)}
   if(UI.scrollDet){UI.scrollDet=false;var dt=$("#vdet");if(dt)setTimeout(function(){dt.scrollIntoView({behavior:"smooth",block:"start"})},30)}
 }
@@ -1179,7 +1260,7 @@ window.QO={
     try{var r=localStorage.getItem(KEY);if(r){S=JSON.parse(r)}else if(KEY===LOCALKEY){S=sample()}else{S={plots:[],plans:[],samples:[],vineInit:true}}}catch(e){S=KEY===LOCALKEY?sample():{plots:[],plans:[],samples:[],vineInit:true}}
     ["weather","cropSel","vw","botte"].forEach(function(f){if(S[f]==null&&prefs[f]!=null)S[f]=prefs[f]});
     if(!S.weather)S.weather={t:14,rh:70,wet:0,rain:0};if(!S.vw)S.vw={t:12,rain:0,shoot:0};if(!S.botte)S.botte={sel:{},prod:"rame",dose:3,unit:"kg",water:500,tank:1000,tit:20};if(!S.cropSel)S.cropSel="lattuga";if(!S.samples)S.samples=[];if(!S.inv)S.inv={items:[],moves:[]};
-    UI.vsel=null;UI.vedit=null;UI.planForm=null;UI.draw=null;render()},
+    UI.vsel=null;UI.vedit=null;UI.gedit=null;UI.planForm=null;UI.draw=null;render()},
   /* dati arrivati dal cloud: sostituiscono parcelle, piani, campioni e segni */
   applyRemote:function(d){if(d.customProducts)S.customProducts=d.customProducts;if(d.notes)S.notes=d.notes;if(d.terreni)S.terreni=d.terreni;S.plots=d.plots;S.plans=d.plans;S.samples=d.samples;S.inv=d.inv||{items:[],moves:[]};if(d.meteo){var man=S.meteo&&S.meteo.manual;S.meteo=d.meteo;S.meteo.manual=!!man}S.geo=d.geo||S.geo||null;S.marksMeta=d.marksMeta||{};
     if(S.sel&&!plotById(S.sel))S.sel=S.plots[0]&&S.plots[0].id;if(!S.sel&&S.plots[0])S.sel=S.plots[0].id;S.vineInit=true;var had=stripSamples(S);saveLocal();safeRender();if(had)setTimeout(save,300)},
@@ -1193,7 +1274,7 @@ window.QO={
   isLocal:function(){return KEY===LOCALKEY},
   plotName:function(id){var p=plotById(id);return p?p.name:"appezzamento"},
   /* strumenti per la mappa satellitare (js/mappa.js) */
-  ui:UI,save:function(){save()},plotById:plotById,vineGeo:vineGeo,ceppoXY:ceppoXY,rowLine:rowLine,nearestCeppo:nearestCeppo,rowNo:rowNo,vignes:vignes,labelPt:labelPt,terreni:terreni,terById:terById,terSel:terSel,inTer:inTer,natCmp:natCmp,autoTer:autoTer,parseGeoFile:parseGeoFile,ensureGeo:ensureGeo,llToPts:llToPts,importPolys:importPolys,vineDefaults:vineDefaults,vineStats:vineStats,stageOf:stageOf,stageName:function(k){return STN[k]?STN[k][1]:k},readFileAsText:readFileAsText,views:function(){return VIEWS},vdot:vdot,pip:pip,area:area,bbox:bbox,num:num,m2:m2,fmt:fmt,
+  ui:UI,save:function(){save()},plotById:plotById,vineGeo:vineGeo,vineGeoGuide:vineGeoGuide,defaultGuide:defaultGuide,straightGuide:straightGuide,guideSmooth:guideSmooth,guidePts:guidePts,guideAngle:guideAngle,simplifyLine:simplifyLine,longestEdgeAngle:longestEdgeAngle,ceppoXY:ceppoXY,rowLine:rowLine,nearestCeppo:nearestCeppo,rowNo:rowNo,vignes:vignes,labelPt:labelPt,terreni:terreni,terById:terById,terSel:terSel,inTer:inTer,natCmp:natCmp,autoTer:autoTer,parseGeoFile:parseGeoFile,ensureGeo:ensureGeo,llToPts:llToPts,importPolys:importPolys,vineDefaults:vineDefaults,vineStats:vineStats,stageOf:stageOf,stageName:function(k){return STN[k]?STN[k][1]:k},readFileAsText:readFileAsText,views:function(){return VIEWS},vdot:vdot,pip:pip,area:area,bbox:bbox,num:num,m2:m2,fmt:fmt,
   typeName:TYPEN,stroke:STROKE,fill:FILL,
   setMark:function(plotId,key,state){var p=plotById(plotId);if(!p||!p.vine)return;if(state)p.vine.marks[key]=state;else delete p.vine.marks[key];save();render()}
 };
@@ -1221,6 +1302,7 @@ load();render();
 <script src="js/prodotti.js"></script>
 <script src="js/voce.js"></script>
 <script src="js/terreni.js"></script>
+<script src="js/filari.js"></script>
 <script>
 if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
 </script>
