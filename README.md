@@ -133,6 +133,7 @@ Se l'azienda è su più corpi separati, in **Vigna → Terreni e confini** crei 
 - **Numero di filari**: se lo scrivi in "Modifica dati", l'app li distribuisce sulla larghezza della parcella e calcola la distanza tra filari. Lasciato vuoto, li calcola dalla distanza.
 - **Direzione dei filari** (pulsante *Direzione* nella scheda della parcella): indichi un *filare guida* e l'app copia gli altri accanto, alla distanza tra filari, tagliandoli sulla forma della parcella. Il filare guida si indica in tre modi:
   - **Disegna**: tocca *Traccia di nuovo* e passa il dito lungo un filare, poi trascina i punti arancioni per correggerlo (toccando la linea aggiungi un punto). *Raddrizza* lo rende dritto;
+  - **Disegna a punti** (in *Disegna*, scegli *A punti* e poi *Nuova linea a punti*): tocchi la mappa un punto dopo l'altro lungo il filare e poi *Fine*. I punti sono **ad angolo** (quadrati: fra due punti ad angolo la linea è dritta) oppure **in curva** (tondi: la linea passa morbida); tocchi un punto per cambiarlo o toglierlo. Dove un tratto dritto entra in una curva, la curva parte nella stessa direzione, senza gomito. Il tipo di punto si può cambiare anche sulle linee fatte a mano libera o camminate;
   - **Cammina**: tocca *Inizia a camminare*, percorri un filare dall'inizio alla fine e tocca *Fine filare*. I punti presi fuori dalla parcella non contano. Dopo puoi correggerlo col dito;
   - **Gira**: per le parcelle dritte, ruoti i filari con la barra (o di un grado alla volta) finché combaciano; *Lato più lungo* li mette paralleli al lato più lungo.
 
@@ -149,6 +150,8 @@ Il meteo per ora è unico per tutta l'azienda.
 ## Orto
 
 L'orto è separato dalla vigna: nella sezione Orto compaiono solo serre, tunnel e campi di pieno campo, con una scelta propria dell'appezzamento. Le parcelle di vigna si gestiscono solo in Vigna. Nella Mappa, scegliendo un appezzamento, il pulsante porta all'orto o alla vigna a seconda del tipo.
+
+**Bancali**: sotto la pianta dell'appezzamento, *Dividi in bancali* lo divide in strisce parallele al lato lungo (o di traverso): scegli quanti bancali e quanto è largo il passaggio, e l'app ti dice quanto viene largo ogni bancale. Tocca un bancale (nell'elenco, o sulla pianta con *Scegli bancale*) e scegli la sua coltura: *Riempi* lo pianta a file lungo il bancale alla distanza giusta (una fila sola al centro se il bancale è più stretto della distanza tra le file), *Svuota bancale* toglie le sue piante. La coltura del bancale è anche quella che si pianta a mano con *Pianta*. *Rifai i bancali* li ricalcola tenendo nomi e colture, *Togli i bancali* li elimina (le piante restano).
 
 ## Comandi vocali e note
 

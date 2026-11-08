@@ -24,7 +24,7 @@
       if (src.rmode === "auto") g = Q.straightGuide(p.pts, src.oriAuto ? Q.longestEdgeAngle(p.pts) : +src.ori || 0);
       else g = Q.defaultGuide(p);
     }
-    UI().gedit = { id: id, form: form, guide: g, orig: JSON.stringify([g, !!src.grev, src.rmode]), rev: !!src.grev, tool: g.length === 2 ? "gira" : "dito", tracing: false, rec: null, curve: null, confirm: false };
+    UI().gedit = { id: id, form: form, guide: g, orig: JSON.stringify([g, !!src.grev, src.rmode]), rev: !!src.grev, sel: -1, pmode: "free", placing: false, tool: g.length === 2 ? "gira" : "dito", tracing: false, rec: null, curve: null, confirm: false };
     view = null;
   }
   function close() { stopWatch(); UI().gedit = null; view = null; }
@@ -45,8 +45,8 @@
     h += '<div><div class="eyebrow">' + esc(p.name) + '</div><h2>Direzione dei filari</h2></div>';
     h += '<div class="row" role="group" aria-label="Come indicare il filare guida" style="flex-wrap:nowrap;gap:6px">' + toolBtn(e, "dito", "Disegna") + toolBtn(e, "gps", "Cammina") + toolBtn(e, "gira", "Gira") + '</div>';
     h += '<div class="mapwrap"><svg id="gsvg" role="img" aria-label="Parcella con il filare guida e i filari copiati"></svg><div class="zoom"><button data-fi="zin" aria-label="Ingrandisci">+</button><button data-fi="zout" aria-label="Rimpicciolisci">−</button><button data-fi="zfit" aria-label="Adatta" style="font-size:13px">⤢</button></div></div><span class="small muted" id="ghint">' + hint(e) + '</span>';
-    if (window.QOSfondo) h += window.QOSfondo.html();
     h += toolPanel(e);
+    if (window.QOSfondo) h += window.QOSfondo.html();
     h += '<div class="row" style="justify-content:space-between;gap:6px"><span class="small" id="gsum"></span><button class="btn sm" data-fi="rev">Inverti numerazione</button></div>';
     if (nm && !e.form) h += '<span class="small" style="color:var(--warn)">Questa parcella ha ' + nm + (nm === 1 ? ' segno' : ' segni') + ' sui ceppi. Se cambi la direzione, i segni restano sugli stessi numeri di filare e di ceppo, ma finiscono su ceppi diversi.</span>';
     h += '<div class="row"><button class="btn primary" data-fi="save">' + (e.confirm ? 'Tocca ancora per salvare' : e.form ? 'Usa questa direzione' : 'Salva') + '</button><button class="btn" data-fi="cancel">Annulla</button></div>';
@@ -57,19 +57,30 @@
     if (e.tool === "gira") return "Ruota con la barra finché i filari combaciano. Con due dita ingrandisci.";
     if (e.tool === "gps" && e.rec) return "Cammina lungo il filare fino in fondo.";
     if (e.tracing) return "Traccia il filare col dito, da un capo all'altro.";
+    if (e.placing) return "Tocca la mappa lungo il filare, un punto dopo l'altro. Metti un punto all'inizio e alla fine di ogni tratto dritto.";
+    if (e.sel >= 0 && e.tool !== "gira") return "Punto scelto: decidi se è ad angolo o in curva, oppure trascinalo.";
     return "Trascina i punti arancioni per correggere. Tocca la linea per aggiungere un punto.";
   }
   function toolPanel(e) {
     var h = '<div class="stack" style="gap:8px">';
     if (e.tool === "dito") {
-      h += e.tracing
+      h += '<div class="row" role="group" aria-label="Modo di disegno" style="flex-wrap:nowrap;gap:6px"><button class="btn sm" data-fi="pmode" data-v="free" aria-pressed="' + (e.pmode !== "punti") + '" style="flex:1">A mano libera</button><button class="btn sm" data-fi="pmode" data-v="punti" aria-pressed="' + (e.pmode === "punti") + '" style="flex:1">A punti</button></div>';
+      if (e.pmode === "punti") h += e.placing
+        ? '<div class="row"><button class="btn primary sm" data-fi="placeEnd">Fine</button><button class="btn sm" data-fi="placeUndo">Togli ultimo</button></div><span class="small muted">' + e.guide.length + (e.guide.length === 1 ? ' punto' : ' punti') + '. I punti nuovi sono ad angolo: quelli dove il filare gira, toccali dopo e scegli "In curva".</span>'
+        : '<div class="row"><button class="btn sm" data-fi="placeNew">Nuova linea a punti</button><button class="btn sm" data-fi="straight">Raddrizza</button></div>';
+      else h += e.tracing
         ? '<div class="row"><button class="btn sm" data-fi="traceStop">Annulla tracciatura</button></div>'
         : '<div class="row"><button class="btn sm" data-fi="trace">Traccia di nuovo</button><button class="btn sm" data-fi="straight">Raddrizza</button></div>';
     } else if (e.tool === "gps") {
       if (!S().geo) h += '<span class="small">Per camminare il filare, la parcella deve avere la posizione GPS: importala da un file o disegnala sulla mappa satellitare.</span>';
       else if (e.rec) h += '<div class="row"><button class="btn primary" data-fi="recStop">Fine filare</button><button class="btn sm" data-fi="recCancel">Annulla</button></div><span class="small mono" id="grec">' + recText(e) + '</span>';
       else h += '<span class="small muted">Mettiti all\'inizio di un filare, tocca il pulsante e percorrilo fino in fondo tenendo lo schermo acceso.</span><div class="row"><button class="btn sm" data-fi="recStart">Inizia a camminare</button></div>';
-    } else {
+    }
+    if (e.tool !== "gira" && !e.tracing && !e.placing && !e.rec && e.sel >= 0 && e.guide[e.sel]) {
+      var sp = e.guide[e.sel];
+      h += '<div class="row" style="gap:6px"><span class="small" style="font-weight:600">Punto ' + (e.sel + 1) + ':</span><button class="btn sm" data-fi="ptType" data-v="a" aria-pressed="' + !!sp[2] + '">Ad angolo</button><button class="btn sm" data-fi="ptType" data-v="c" aria-pressed="' + !sp[2] + '">In curva</button><button class="btn sm" data-fi="ptDel">Togli</button></div>';
+    }
+    if (e.tool === "gira") {
       var a = Q.guideAngle(e.guide);
       h += '<div class="row" style="flex-wrap:nowrap;gap:8px"><button class="btn sm" data-fi="angStep" data-v="-1" aria-label="Un grado in meno">−1°</button><input id="gAng" type="range" min="0" max="179" step="1" value="' + a + '" aria-label="Direzione dei filari in gradi da Nord" style="flex:1;min-height:36px"><button class="btn sm" data-fi="angStep" data-v="1" aria-label="Un grado in più">+1°</button></div>';
       h += '<div class="row" style="justify-content:space-between"><span class="mono" id="gAngV">' + a + '° da Nord</span><button class="btn sm" data-fi="longest">Lato più lungo</button></div>';
@@ -111,7 +122,10 @@
     } else {
       out += '<polyline points="' + pl(Q.guideSmooth(e.guide)) + '" fill="none" stroke="' + ORANGE + '" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
       if (e.stroke && e.stroke.length > 1) out += '<polyline points="' + pl(e.stroke) + '" fill="none" stroke="' + ORANGE + '" stroke-width="4" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
-      if (e.tool !== "gira" && !e.tracing) e.guide.forEach(function (q) { out += '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="' + (e.guide.length > 8 ? 7 : 9) * kk + '" fill="var(--surface)" stroke="' + ORANGE + '" stroke-width="3" vector-effect="non-scaling-stroke"/>'; });
+      if (e.tool !== "gira" && !e.tracing) e.guide.forEach(function (q, i) {
+        var r = (i === e.sel ? 11 : e.guide.length > 8 ? 7 : 9) * kk, fl = i === e.sel ? ORANGE : 'var(--surface)';
+        out += q[2] ? '<rect x="' + (q[0] - r) + '" y="' + (q[1] - r) + '" width="' + 2 * r + '" height="' + 2 * r + '" fill="' + fl + '" stroke="' + ORANGE + '" stroke-width="3" vector-effect="non-scaling-stroke"/>' : '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="' + r + '" fill="' + fl + '" stroke="' + ORANGE + '" stroke-width="3" vector-effect="non-scaling-stroke"/>';
+      });
     }
     out += '<text x="' + (view.x + 12 * kk) + '" y="' + (view.y + 22 * kk) + '" text-anchor="start" font-size="' + 14 * kk + '" font-weight="700" fill="var(--ink)" stroke="var(--surface)" stroke-width="3" paint-order="stroke" pointer-events="none">N ↑</text>';
     if (!s.querySelector("#gbg")) s.innerHTML = '<g id="gbg"></g><g id="gfg"></g>';
@@ -142,7 +156,7 @@
       if (a.length !== 1) return;
       var pt = toM(ev);
       if (e.tracing) { e.stroke = [pt]; st = { kind: "stroke", x: ev.clientX, y: ev.clientY }; return; }
-      var hi = e.tool !== "gira" && !e.rec ? nearHandle(pt) : -1;
+      var hi = e.tool !== "gira" && !e.rec && !e.placing ? nearHandle(pt) : -1;
       st = hi >= 0 ? { kind: "drag", i: hi, x: ev.clientX, y: ev.clientY, moved: false } : { kind: "pan", x: ev.clientX, y: ev.clientY, v: Object.assign({}, view), moved: false };
     });
     s.addEventListener("pointermove", function (ev) {
@@ -156,7 +170,7 @@
       if (!st) return;
       if (st.kind === "stroke") { var pt = toM(ev), l = e.stroke[e.stroke.length - 1]; if (Math.hypot(pt[0] - l[0], pt[1] - l[1]) > 3 * k()) { e.stroke.push(pt); redraw(); } return; }
       var dx = ev.clientX - st.x, dy = ev.clientY - st.y; if (!st.moved && Math.hypot(dx, dy) < 7) return; st.moved = true;
-      if (st.kind === "drag") { var q = toM(ev); e.guide[st.i] = [Math.round(q[0] * 100) / 100, Math.round(q[1] * 100) / 100]; e.curve = null; redraw(); }
+      if (st.kind === "drag") { var q = toM(ev); var nq = [Math.round(q[0] * 100) / 100, Math.round(q[1] * 100) / 100]; if (e.guide[st.i][2]) nq.push(1); e.guide[st.i] = nq; e.curve = null; redraw(); }
       else { var kk2 = st.v.w / s.getBoundingClientRect().width; view = { x: st.v.x - dx * kk2, y: st.v.y - dy * kk2, w: st.v.w, h: st.v.h }; redraw(); }
     });
     function up(ev, cancel) {
@@ -164,7 +178,10 @@
       if (was >= 2) { pz = null; st = null; return; }
       if (!st) return; var cur = st; st = null;
       if (cur.kind === "stroke") { if (!cancel) finishStroke(); return; }
-      if (cur.kind === "pan" && !cur.moved && !cancel && e.tool !== "gira" && !e.rec) addPointAt(toM(ev));
+      if (cancel || cur.moved || e.tool === "gira" || e.rec) return;
+      if (e.placing) { var np = toM(ev); e.guide.push([Math.round(np[0] * 100) / 100, Math.round(np[1] * 100) / 100, 1]); Q.render(); return; }
+      if (cur.kind === "drag") { e.sel = e.sel === cur.i ? -1 : cur.i; Q.render(); return; }
+      if (cur.kind === "pan") { if (!addPointAt(toM(ev)) && e.sel >= 0) { e.sel = -1; Q.render(); } }
     }
     s.addEventListener("pointerup", function (ev) { up(ev, false); });
     s.addEventListener("pointercancel", function (ev) { up(ev, true); });
@@ -213,9 +230,16 @@
       var t = b.getAttribute("data-v"); if (e.rec && t !== "gps") { stopWatch(); e.rec = null; }
       if (t === "gira" && e.guide.length > 2) { e.curve = e.guide; e.guide = Q.straightGuide(Q.plotById(e.id).pts, Q.guideAngle(e.guide)); }
       else if (t !== "gira" && e.curve && e.guide.length === 2) { e.guide = e.curve; e.curve = null; }
-      e.tool = t; e.tracing = false;
+      if (e.placing && e.guide.length < 2 && e.prev) e.guide = e.prev;
+      e.tool = t; e.tracing = false; e.placing = false; e.sel = -1;
     }
-    else if (a === "trace") e.tracing = true;
+    else if (a === "trace") { e.tracing = true; e.sel = -1; }
+    else if (a === "pmode") { e.pmode = b.getAttribute("data-v"); e.tracing = false; e.placing = false; e.sel = -1; }
+    else if (a === "placeNew") { e.prev = e.guide; e.guide = []; e.placing = true; e.sel = -1; e.curve = null; }
+    else if (a === "placeUndo") { e.guide.pop(); }
+    else if (a === "placeEnd") { if (e.guide.length < 2) { Q.toast("Servono almeno due punti"); return; } e.placing = false; e.prev = null; }
+    else if (a === "ptType") { var pq = e.guide[e.sel]; if (pq) { var nq2 = [pq[0], pq[1]]; if (b.getAttribute("data-v") === "a") nq2.push(1); e.guide[e.sel] = nq2; } }
+    else if (a === "ptDel") { if (e.guide.length <= 2) { Q.toast("Il filare guida ha bisogno di almeno due punti"); return; } e.guide.splice(e.sel, 1); e.sel = -1; }
     else if (a === "traceStop") { e.tracing = false; e.stroke = null; }
     else if (a === "straight") { e.guide = Q.straightGuide(Q.plotById(e.id).pts, Q.guideAngle(e.guide)); e.tool = "gira"; e.curve = null; }
     else if (a === "angStep") { setAngle(Q.guideAngle(e.guide) + +b.getAttribute("data-v")); return; }
@@ -235,7 +259,8 @@
     if (e.rec) { Q.toast("Prima tocca Fine filare"); return false; }
     var changed = JSON.stringify([e.guide, e.rev, "guida"]) !== e.orig, nm = Object.keys(p.vine.marks || {}).length;
     if (changed && nm && !e.confirm) { e.confirm = true; return false; }
-    var gd = e.guide.map(function (q) { return { x: q[0], y: q[1] }; });
+    if (e.placing) { if (e.guide.length < 2) { Q.toast("Metti almeno due punti, poi tocca Fine"); return false; } e.placing = false; }
+    var gd = e.guide.map(function (q) { var o = { x: q[0], y: q[1] }; if (q[2]) o.a = 1; return o; });
     src.guida = gd; src.grev = e.rev; src.rmode = "guida";
     if (!e.form) { delete Q.views()["vine-" + p.id]; Q.save(); Q.toast("Direzione salvata: " + n + (n === 1 ? " filare" : " filari") + ", " + g.ceppi.toLocaleString("it-IT") + " ceppi"); }
     else Q.toast("Direzione pronta: tocca Salva per confermare la parcella");

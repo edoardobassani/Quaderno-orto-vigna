@@ -44,13 +44,14 @@ Pubblicata su GitHub Pages: https://edoardobassani.github.io/Quaderno-orto-vigna
 | `js/voce.js` | Comandi vocali e note dettate, interprete a regole italiano. Espone `window.QOVoice`. |
 | `js/terreni.js` | Terreni, confini, import guidato di confine e terrazze, riepilogo in Oggi. Espone `window.QOTer`. |
 | `js/sfondo.js` | Sfondo fotografico per Direzione e Forma: riquadri Esri World Imagery o foto aeree dell'archivio IndexedDB `qo-foto` (le stesse della Mappa), messi nella SVG in metri locali con `S.geo`. `paint(g, view, kk)` rifà le immagini solo quando cambia il gruppo di riquadri. Scelta e trasparenza in localStorage (`qo-sfondo`, `qo-sfondo-op`). Espone `window.QOSfondo`; pulsanti con `data-sf`. |
+| `js/bancali.js` | Bancali dentro un appezzamento dell'orto: `p.beds = [{id, name, crop, pts: [{x, y}]}]` (punti come oggetti per Firestore; sincronizzati in `parcelle`), divisione in strisce, coltura per bancale, riempimento a file lungo il bancale. Espone `window.QOBanc`; pulsanti con `data-bk`. |
 | `js/forma.js` | Schermata "Modifica forma" di una parcella già creata (vertici da trascinare, "+" sui lati, togli punto, sposta tutta, annulla). Stato in `QO.ui.fedit`; quando è aperta, `render()` mostra solo questa schermata. Espone `window.QOForma`. Attributo dei pulsanti: `data-fo`. |
 | `js/filari.js` | Schermata "Direzione dei filari": filare guida disegnato col dito, camminato col GPS o ruotato; anteprima dal vivo. Stato in `QO.ui.gedit`. Espone `window.QOFil`. Attributo dei pulsanti: `data-fi`. |
 | `sw.js` | Service worker (vedi "Pubblicare una modifica"). |
 | `firestore.rules` | Regole di sicurezza del database. Si incollano a mano nella console Firebase. |
 | `README.md` | Guida per gli utenti (in italiano). Quando aggiungi una funzione visibile, aggiungi o aggiorna la sezione corrispondente. |
 
-Ordine degli script in fondo a `index.html`: sync.js (modulo), Leaflet, mappa.js, inventario.js, meteo.js, prodotti.js, voce.js, terreni.js, sfondo.js, filari.js, forma.js, poi la registrazione del service worker. I moduli leggono e scrivono solo attraverso `window.QO`, e alla fine chiamano `Q.render()`.
+Ordine degli script in fondo a `index.html`: sync.js (modulo), Leaflet, mappa.js, inventario.js, meteo.js, prodotti.js, voce.js, terreni.js, sfondo.js, filari.js, forma.js, bancali.js, poi la registrazione del service worker. I moduli leggono e scrivono solo attraverso `window.QO`, e alla fine chiamano `Q.render()`.
 
 ### Librerie da CDN (versioni fissate)
 
@@ -87,7 +88,8 @@ Se aggiungi un host nuovo, aggiungilo anche a `LIB_HOSTS` in `sw.js`.
   - `data-pr`: prodotti;
   - `data-fi`: direzione dei filari;
   - `data-fo`: modifica della forma;
-  - `data-sf`: sfondo fotografico.
+  - `data-sf`: sfondo fotografico;
+  - `data-bk`: bancali dell'orto.
 - **Salvataggio**: `save()` salva in locale e, se c'è il cloud, chiama `QOSync.push(S)`. Dopo `save()` serve un `render()` esplicito.
 - **Testi dinamici**: passa sempre per `esc()` prima di metterli nell'HTML.
 - **Conferme**: niente `alert` o `confirm`. Per le azioni distruttive si usa il "tocca ancora", con `UI.confirm` o variabili simili. Per gli esiti si usa `toast()`.
@@ -99,7 +101,7 @@ Se aggiungi un host nuovo, aggiungilo anche a `LIB_HOSTS` in `sw.js`.
   - `auto`: dritti e paralleli. Per l'orientamento, se `oriAuto` è vero si usano i gradi del lato più lungo, altrimenti `ori`. Con `nrows > 0` i filari vengono distribuiti sulla larghezza.
   - `curva`: seguono la forma della terrazza. Il numero viene da `nrows`, oppure da larghezza media diviso distanza tra filari.
   - `man`: elenco `mrows: [{c: ceppi, len}]` disposto lungo la terrazza.
-  - `guida` (predefinita per le parcelle nuove, `vineGeoGuide`): i filari sono copie parallele del filare guida `p.vine.guida` (punti `{x, y}`, salvati così per Firestore), distanti `inter`, tagliate dalla forma (`clipLine`, che ignora uscite più brevi di 3 m). Il filare guida passa per i punti con una curva morbida (`guideSmooth`) e ai capi viene prolungato continuando la sua curvatura; conta la forma, non la posizione. Senza `guida` si usa `defaultGuide` (linea di mezzo della terrazza). `grev` inverte la numerazione. Pezzi con meno di 4 ceppi e filari vuoti ai bordi vengono tolti. Le modalità `auto` e `curva` restano per le parcelle vecchie finché non si salva una direzione.
+  - `guida` (predefinita per le parcelle nuove, `vineGeoGuide`): i filari sono copie parallele del filare guida `p.vine.guida` (punti `{x, y}`, salvati così per Firestore), distanti `inter`, tagliate dalla forma (`clipLine`, che ignora uscite più brevi di 3 m). Ogni punto può essere ad angolo (`{x, y, a: 1}`, in memoria `[x, y, 1]`): fra due punti ad angolo la linea è dritta, e dove un tratto dritto entra in una curva la curva parte tangente. Il filare guida passa per i punti con una curva morbida (`guideSmooth`) e ai capi viene prolungato continuando la sua curvatura; conta la forma, non la posizione. Senza `guida` si usa `defaultGuide` (linea di mezzo della terrazza). `grev` inverte la numerazione. Pezzi con meno di 4 ceppi e filari vuoti ai bordi vengono tolti. Le modalità `auto` e `curva` restano per le parcelle vecchie finché non si salva una direzione.
 - I segni sui ceppi sono in `p.vine.marks` con chiave **`"filare:tratto:ceppo"`**, tutti contati da 0, e valore `f` (fallanza), `s` (sintomi) oppure `n` (rimpiazzato). **Se cambi la geometria di una parcella che ha segni, i segni restano sugli stessi indici ma su ceppi diversi.** Per questo `oriAuto` viene deciso una volta sola: è vero per le parcelle nuove e per quelle senza segni.
 - La numerazione mostrata parte da `p.vine.r0`: usa `rowNo(p, indice)`. Funzioni comuni: `ceppoXY`, `rowLine`, `nearestCeppo` (per tocco, GPS e voce). Valgono per tutte le modalità: non ricalcolare la geometria a mano altrove.
 

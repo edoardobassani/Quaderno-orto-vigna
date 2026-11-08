@@ -144,6 +144,7 @@ function decode() {
   const plots = Object.entries(remote.parcelle || {}).map(([id, d]) => {
     const p = { id, name: d.name || "Area", type: d.type || "campo", pts: (d.pts || []).map((q) => [q.x, q.y]), plants: d.plants || [] };
     if (d.ter) p.ter = d.ter;
+    if (d.beds) p.beds = d.beds;
     if (d.vine) p.vine = Object.assign({ phen: [] }, d.vine, { marks: {} });
     return p;
   }).sort((a, b) => a.name.localeCompare(b.name, "it"));
@@ -180,6 +181,7 @@ function encode(S) {
   (S.plots || []).forEach((p) => {
     const d = { name: p.name, type: p.type, pts: p.pts.map((q) => ({ x: q[0], y: q[1] })), plants: p.plants || [] };
     if (p.ter) d.ter = p.ter;
+    if (p.beds && p.beds.length) d.beds = p.beds;
     if (p.vine) {
       const v = Object.assign({}, p.vine); delete v.marks; d.vine = v;
       Object.keys(p.vine.marks || {}).forEach((k) => { out.segni[p.id + "__" + k.replace(/:/g, "-")] = { plot: p.id, key: k, stato: p.vine.marks[k] }; });
