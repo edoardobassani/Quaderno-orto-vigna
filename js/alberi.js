@@ -111,7 +111,7 @@
     var e = Z(), b;
     if (e.trunk) { var R = Math.max(8, (e.mode === "cerchio" ? e.r : 3) * 3); b = { x0: e.trunk[0] - R, x1: e.trunk[0] + R, y0: e.trunk[1] - R, y1: e.trunk[1] + R }; if (e.pts.length >= 3) { var pb = Q.bbox(e.pts); b = { x0: Math.min(b.x0, pb.x0 - 3), x1: Math.max(b.x1, pb.x1 + 3), y0: Math.min(b.y0, pb.y0 - 3), y1: Math.max(b.y1, pb.y1 + 3) }; } }
     else { var all = []; S().plots.forEach(function (p) { all = all.concat(p.pts); }); b = all.length ? Q.bbox(all) : { x0: -50, x1: 50, y0: -50, y1: 50 }; }
-    var w = b.x1 - b.x0, h = b.y1 - b.y0, asp = 0.85; if (h / w > asp) w = h / asp; else h = w * asp;
+    var w = b.x1 - b.x0, h = b.y1 - b.y0, asp = Math.min(Q.mapMaxAspect ? Q.mapMaxAspect(svgEl()) : 9, 0.85); if (h / w > asp) w = h / asp; else h = w * asp;
     view = { x: (b.x0 + b.x1) / 2 - w / 2, y: (b.y0 + b.y1) / 2 - h / 2, w: w, h: h };
   }
   function k() { var s = svgEl(), r = s && s.getBoundingClientRect(); return view.w / ((r && r.width) || 360); }

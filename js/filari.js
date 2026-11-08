@@ -92,7 +92,7 @@
   /* ---------------- disegno ---------------- */
   function svgEl() { return $("#gsvg"); }
   function fit() {
-    var p = Q.plotById(E().id), b = Q.bbox(p.pts), m = Math.max(3, (b.x1 - b.x0 + b.y1 - b.y0) * 0.06), w = b.x1 - b.x0 + 2 * m, h = b.y1 - b.y0 + 2 * m, asp = Math.max(0.6, Math.min(1.1, h / w));
+    var p = Q.plotById(E().id), b = Q.bbox(p.pts), m = Math.max(3, (b.x1 - b.x0 + b.y1 - b.y0) * 0.06), w = b.x1 - b.x0 + 2 * m, h = b.y1 - b.y0 + 2 * m, asp = Math.min(Q.mapMaxAspect ? Q.mapMaxAspect(svgEl()) : 9, Math.max(0.6, Math.min(1.1, h / w)));
     if (h / w > asp) w = h / asp; else h = w * asp;
     view = { x: (b.x0 + b.x1) / 2 - w / 2, y: (b.y0 + b.y1) / 2 - h / 2, w: w, h: h };
   }

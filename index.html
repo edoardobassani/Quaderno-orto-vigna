@@ -40,6 +40,7 @@ img{max-width:100%}
 .syncbar{position:sticky;top:0;z-index:30;background:var(--bg);padding-bottom:6px;box-shadow:0 0 0 100vmax var(--bg);clip-path:inset(0 -100vmax)}
 .syncbar .cloudbtn{position:relative;width:44px;height:44px;padding:0;justify-content:center;border-radius:22px}
 .syncbar .backbtn[aria-disabled="true"]{opacity:.4}
+
 .syncbar .cloudbtn svg{width:24px;height:24px}
 .syncbar .cloudbtn .syncdot{position:absolute;right:7px;bottom:8px;width:12px;height:12px;border-radius:6px;border:2px solid var(--surface)}
 .syncdot{width:10px;height:10px;border-radius:5px;flex-shrink:0;background:var(--ink-2)}
@@ -145,6 +146,29 @@ a{color:var(--serra)}
 .src{font-size:13px}
 .sep{height:1px;background:var(--line);margin:4px 0}
 @media (prefers-reduced-motion:no-preference){.item,.btn,.chip{transition:background .15s,border-color .15s}}
+/* ---------- schermi grandi (PC, tablet in orizzontale): menu a sinistra, mappa al centro, scheda a destra ---------- */
+@media (min-width:1024px){
+  body{padding-left:200px}
+  .syncbar{max-width:none;padding-left:24px;padding-right:24px}
+  .app{max-width:1360px;padding-left:24px;padding-right:24px;padding-bottom:32px}
+  .nav{top:0;bottom:0;right:auto;width:200px;flex-direction:column;justify-content:flex-start;align-items:stretch;border-top:none;border-right:1px solid var(--line);padding:24px 12px 16px;z-index:35}
+  .nav::before{content:"Quaderno orto e vigna";font:800 17px var(--f-display);color:var(--ink);padding:0 14px 18px;line-height:1.25}
+  .nav div{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:4px;max-width:none}
+  .nav a{justify-content:flex-start;gap:14px;padding:0 14px;min-height:46px;width:100%;box-sizing:border-box}
+  .nav a::after{content:attr(aria-label);font:600 16px var(--f-body);color:inherit}
+  .nav .badge{position:static;order:3;margin-left:auto}
+  .nav a::after{order:2}
+  .toast{bottom:24px;left:calc(50% + 100px)}
+  .dk-grid{display:grid;grid-template-columns:minmax(0,1fr) 440px;gap:20px;align-items:start}
+  .dk-main,.dk-side{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .dk-side{position:sticky;top:76px;max-height:calc(100vh - 92px);overflow-y:auto;overscroll-behavior:contain;padding-right:4px}
+  .dk-main>*,.dk-side>*{margin-top:0!important;margin-bottom:0!important;flex-shrink:0}
+  .dk-cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;align-items:start}
+  .dk-cols>section{display:flex;flex-direction:column;gap:10px;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px}
+  .dk-cols>section>*{margin-top:0!important;margin-bottom:0!important}
+  .dk-cols>section>h2:first-child,.dk-cols>section>.row:first-child h2{margin:0}
+  .dk-ed .dk-grid{grid-template-columns:minmax(0,1fr) 380px}
+}
 </style>
 
 </head>
@@ -497,7 +521,47 @@ function renderNav(){
   var due=S.plans.filter(function(p){var d=nextDue(p);return d&&d<=today()}).length;
   $("#nav").innerHTML=TABS.map(function(t){return '<a href="#" data-tab="'+t[0]+'" aria-label="'+TABN[t[0]]+'" title="'+TABN[t[0]]+'"'+(UI.tab===t[0]?' aria-current="page"':'')+'>'+ICON[t[0]]+(t[0]==="trattamenti"&&due?' <span class="badge b-warn">'+due+'</span>':'')+(t[0]==="magazzino"&&window.QOInv&&window.QOInv.alertsCount()?' <span class="badge b-bad">'+window.QOInv.alertsCount()+'</span>':'')+'</a>'}).join("");
 }
-function render(){mergeCustom();mergeCrops();renderNav();renderZoomPop();var a=$("#app");if(UI.fedit&&window.QOForma){a.innerHTML=window.QOForma.html();afterRender();return}if(UI.zedit&&window.QOAlb){a.innerHTML=window.QOAlb.zoneHtml();afterRender();return}a.innerHTML=({oggi:vOggi,mappa:vMappa,impianto:vImpianto,vigna:vVigna,trattamenti:vTratt,magazzino:function(){return window.QOInv?window.QOInv.view():'<div class="top"><h1>Magazzino</h1></div><div class="panel">Caricamento…</div>'},libreria:vLib})[UI.tab]();afterRender();navTrack()}
+function render(){mergeCustom();mergeCrops();renderNav();renderZoomPop();var a=$("#app");if(UI.fedit&&window.QOForma){a.innerHTML=window.QOForma.html();dkLayout(a);afterRender();navTrack();return}if(UI.zedit&&window.QOAlb){a.innerHTML=window.QOAlb.zoneHtml();dkLayout(a);afterRender();navTrack();return}a.innerHTML=({oggi:vOggi,mappa:vMappa,impianto:vImpianto,vigna:vVigna,trattamenti:vTratt,magazzino:function(){return window.QOInv?window.QOInv.view():'<div class="top"><h1>Magazzino</h1></div><div class="panel">Caricamento…</div>'},libreria:vLib})[UI.tab]();dkLayout(a);afterRender();navTrack()}
+/* ---------- impaginazione per schermi grandi ----------
+   Sul telefono non cambia niente. Da 1024 px in su (vedi CSS), dopo aver scritto la pagina si spostano i blocchi:
+   - pagine con una mappa: titolo in alto, mappa e quello che c'è prima a sinistra, scheda a destra (da #vdet, o dopo la mappa);
+   - schermate di modifica (un riquadro con la mappa dentro): mappa a sinistra, comandi a destra;
+   - pagine senza mappa: un riquadro per ogni titolo (h2), affiancati in colonne.
+   Gli spostamenti avvengono prima di afterRender, così mappe e Leaflet si misurano già nella colonna giusta. */
+var DKQ=window.matchMedia?window.matchMedia("(min-width: 1024px)"):null;
+function isWide(){return !!(DKQ&&DKQ.matches)}
+if(DKQ){var dkCh=function(){render()};if(DKQ.addEventListener)DKQ.addEventListener("change",dkCh);else if(DKQ.addListener)DKQ.addListener(dkCh)}
+function isMapEl(e){return e.matches(".mapwrap,.lmap,#lmapSlot")||!!e.querySelector(":scope > .mapwrap, :scope > #lmapSlot, :scope > .lmap")}
+function dkGrid(parent,before,mainEls,sideEls){
+  var g=document.createElement("div"),m=document.createElement("div"),sd=document.createElement("div");g.className="dk-grid";m.className="dk-main";sd.className="dk-side";
+  mainEls.forEach(function(e){m.appendChild(e)});sideEls.forEach(function(e){sd.appendChild(e)});g.appendChild(m);g.appendChild(sd);parent.insertBefore(g,before||null);
+}
+function dkLayout(a){
+  document.body.classList.toggle("dk",isWide());if(!isWide())return;
+  var kids=Array.prototype.slice.call(a.children);if(!kids.length)return;
+  /* schermata di modifica: il riquadro principale ha dentro la mappa */
+  var ed=kids.filter(function(e){return e.matches(".panel")&&e.querySelector(":scope > .mapwrap")})[0];
+  if(ed&&!kids.some(function(e){return e!==ed&&isMapEl(e)})){
+    var ik=Array.prototype.slice.call(ed.children),mi=-1;ik.forEach(function(e,i){if(mi<0&&e.matches(".mapwrap"))mi=i});
+    if(mi>=0&&mi<ik.length-1){a.classList.add("dk-ed");var cut=ik[mi+1]&&ik[mi+1].matches("#ghint,#fhint,.small.muted")?mi+2:mi+1;dkGrid(ed,null,ik.slice(0,cut),ik.slice(cut));}
+    return;
+  }
+  a.classList.remove("dk-ed");
+  var head=[];while(kids.length&&kids[0].matches(".top,.seg,.strip")){head.push(kids.shift())}
+  var mapI=-1;kids.forEach(function(e,i){if(mapI<0&&isMapEl(e))mapI=i});
+  if(mapI>=0){
+    var sI=-1;kids.forEach(function(e,i){if(sI<0&&e.id==="vdet")sI=i});if(sI<0)sI=mapI+1;
+    if(sI<kids.length)dkGrid(a,null,kids.slice(0,sI),kids.slice(sI));
+    return;
+  }
+  /* pagina senza mappa: riquadri per titolo */
+  if(kids.length<2)return;
+  var cols=document.createElement("div"),sec=null;cols.className="dk-cols";
+  kids.forEach(function(e){var isH=e.tagName==="H2"||(e.matches(".row")&&e.firstElementChild&&e.firstElementChild.tagName==="H2");if(!sec||isH){sec=document.createElement("section");cols.appendChild(sec)}sec.appendChild(e)});
+  if(cols.children.length>1)a.appendChild(cols);else{Array.prototype.slice.call(sec.children).forEach(function(e){a.appendChild(e)})}
+}
+/* altezza massima di una mappa rispetto alla sua larghezza, perché sul PC entri nello schermo */
+function mapMaxAspect(svg){if(!isWide()||!svg)return 9;var w=svg.getBoundingClientRect().width||1;return Math.max(0.45,(window.innerHeight-200)/w)}
 /* ---------- navigazione: ultima schermata aperta e tasto indietro ----------
    Una "schermata" è la sezione con la scheda aperta (parcella, albero, articolo del magazzino…).
    A ogni render, se la schermata cambia, quella di prima va nella pila (con la posizione dello scorrimento).
@@ -1393,7 +1457,7 @@ window.QO={
   isLocal:function(){return KEY===LOCALKEY},
   plotName:function(id){var p=plotById(id);return p?p.name:"appezzamento"},
   /* strumenti per la mappa satellitare (js/mappa.js) */
-  ui:UI,save:function(){save()},plotById:plotById,fillPlot:fill,ortoSel:ortoSel,isTree:isTree,mergeCrops:mergeCrops,typeNames:TYPEN,vineGeo:vineGeo,vineGeoGuide:vineGeoGuide,defaultGuide:defaultGuide,straightGuide:straightGuide,guideSmooth:guideSmooth,guidePts:guidePts,guideAngle:guideAngle,simplifyLine:simplifyLine,longestEdgeAngle:longestEdgeAngle,ceppoXY:ceppoXY,rowLine:rowLine,nearestCeppo:nearestCeppo,rowNo:rowNo,vignes:vignes,labelPt:labelPt,terreni:terreni,terById:terById,terSel:terSel,inTer:inTer,natCmp:natCmp,autoTer:autoTer,parseGeoFile:parseGeoFile,ensureGeo:ensureGeo,llToPts:llToPts,importPolys:importPolys,vineDefaults:vineDefaults,vineStats:vineStats,stageOf:stageOf,stageName:function(k){return STN[k]?STN[k][1]:k},readFileAsText:readFileAsText,views:function(){return VIEWS},vdot:vdot,pip:pip,area:area,bbox:bbox,num:num,m2:m2,fmt:fmt,
+  ui:UI,save:function(){save()},plotById:plotById,fillPlot:fill,ortoSel:ortoSel,mapMaxAspect:mapMaxAspect,isWide:isWide,isTree:isTree,mergeCrops:mergeCrops,typeNames:TYPEN,vineGeo:vineGeo,vineGeoGuide:vineGeoGuide,defaultGuide:defaultGuide,straightGuide:straightGuide,guideSmooth:guideSmooth,guidePts:guidePts,guideAngle:guideAngle,simplifyLine:simplifyLine,longestEdgeAngle:longestEdgeAngle,ceppoXY:ceppoXY,rowLine:rowLine,nearestCeppo:nearestCeppo,rowNo:rowNo,vignes:vignes,labelPt:labelPt,terreni:terreni,terById:terById,terSel:terSel,inTer:inTer,natCmp:natCmp,autoTer:autoTer,parseGeoFile:parseGeoFile,ensureGeo:ensureGeo,llToPts:llToPts,importPolys:importPolys,vineDefaults:vineDefaults,vineStats:vineStats,stageOf:stageOf,stageName:function(k){return STN[k]?STN[k][1]:k},readFileAsText:readFileAsText,views:function(){return VIEWS},vdot:vdot,pip:pip,area:area,bbox:bbox,num:num,m2:m2,fmt:fmt,
   typeName:TYPEN,stroke:STROKE,fill:FILL,
   setMark:function(plotId,key,state){var p=plotById(plotId);if(!p||!p.vine)return;if(state)p.vine.marks[key]=state;else delete p.vine.marks[key];save();render()}
 };

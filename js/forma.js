@@ -40,7 +40,7 @@
   /* ---------------- disegno ---------------- */
   function svgEl() { return $("#fsvg"); }
   function fit() {
-    var b = Q.bbox(E().pts), m = Math.max(3, (b.x1 - b.x0 + b.y1 - b.y0) * 0.08), w = b.x1 - b.x0 + 2 * m, h = b.y1 - b.y0 + 2 * m, asp = Math.max(0.7, Math.min(1.15, h / w));
+    var b = Q.bbox(E().pts), m = Math.max(3, (b.x1 - b.x0 + b.y1 - b.y0) * 0.08), w = b.x1 - b.x0 + 2 * m, h = b.y1 - b.y0 + 2 * m, asp = Math.min(Q.mapMaxAspect ? Q.mapMaxAspect(svgEl()) : 9, Math.max(0.7, Math.min(1.15, h / w)));
     if (h / w > asp) w = h / asp; else h = w * asp;
     /* spazio a destra per i pulsanti dello zoom */
     var ex = w * 0.18; view = { x: (b.x0 + b.x1) / 2 - w / 2, y: (b.y0 + b.y1) / 2 - h / 2, w: w + ex, h: h * (w + ex) / w };

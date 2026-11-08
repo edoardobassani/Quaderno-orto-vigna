@@ -153,6 +153,17 @@ Il meteo per ora è unico per tutta l'azienda.
 - La barra in alto (indietro, nuvola, microfono, **Aa**) resta sempre visibile mentre scorri.
 - **Riaprendo l'app** (anche se l'hai chiusa per sbaglio) riparti dall'ultima schermata aperta, con la stessa scheda e alla stessa altezza; le schermate di modifica non si riaprono.
 
+## Sul PC
+
+L'app si apre anche dal computer (Chrome o Edge), allo stesso indirizzo; con il cloud vedi gli stessi dati del telefono. Quando la finestra è larga (da 1024 pixel in su, anche un tablet in orizzontale) l'impaginazione cambia da sola:
+
+- **menu a sinistra** con i nomi delle sezioni, al posto della barra in basso;
+- in Vigna, Orto e Mappa la **mappa grande a sinistra** e la **scheda a destra** (dati della parcella, bancali e colture, appezzamento scelto), che resta ferma mentre scorri;
+- nelle schermate di modifica (Forma, Direzione, Zona dell'albero) la mappa occupa quasi tutto lo schermo e i comandi stanno a destra;
+- in Oggi, Trattamenti e nelle altre pagine i blocchi sono **affiancati in colonne**.
+
+Col mouse: rotellina per ingrandire, trascinare per spostare, clic al posto del tocco. Stringendo la finestra si torna all'impaginazione del telefono, che non cambia.
+
 ## Orto
 
 L'orto è separato dalla vigna: nella sezione Orto compaiono solo serre, tunnel e campi di pieno campo, con una scelta propria dell'appezzamento. Le parcelle di vigna si gestiscono solo in Vigna. Nella Mappa, scegliendo un appezzamento, il pulsante porta all'orto o alla vigna a seconda del tipo.
