@@ -71,6 +71,7 @@ Se aggiungi un host nuovo, aggiungilo anche a `LIB_HOSTS` in `sw.js`.
   - `S.plots`: appezzamenti, ciascuno `{id, name, type: serra|tunnel|campo|vigna, pts:[[x,y]...], plants, vine?, ter?}`.
   - `S.plans`: trattamenti programmati, `{id, prod, plot, start, every, count, rain, cu, done:[date]}`.
   - Altri campi: `S.samples`, `S.notes`, `S.terreni`, `S.inv`, `S.meteo`, `S.customProducts`, `S.botte`, `S.geo`.
+- **Orto e vigna sono separati**: la sezione Orto usa solo gli appezzamenti non di vigna (`orti()`) e una scelta propria, `S.osel` (`ortoSel()`). `S.sel` resta la scelta della Mappa; la Vigna usa `UI.vsel`. Non mostrare parcelle di vigna nell'Orto.
 - **Coordinate**: le forme sono in **metri locali** (x verso est, y verso sud). `S.geo = {lat0, lon0, ox, oy}` le collega a latitudine e longitudine:
   - `x = ox + (lon - lon0) * cos(lat0) * 111320`
   - `y = oy + (lat0 - lat) * 110574`

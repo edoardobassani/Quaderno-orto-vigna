@@ -1,6 +1,6 @@
 /* Service worker: rende l'app utilizzabile senza connessione.
    Ad ogni modifica dei file dell'app aumenta VERSION, così i telefoni scaricano la versione nuova. */
-const VERSION = "qo-v19";
+const VERSION = "qo-v20";
 const TILES = "qo-tiles-v1";
 const MAX_TILES = 4000;
 const SHELL = [

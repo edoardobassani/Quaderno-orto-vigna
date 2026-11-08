@@ -145,6 +145,10 @@ Le mappe delle parcelle si ingrandiscono con due dita (o con la rotella del mous
 
 Il meteo per ora è unico per tutta l'azienda.
 
+## Orto
+
+L'orto è separato dalla vigna: nella sezione Orto compaiono solo serre, tunnel e campi di pieno campo, con una scelta propria dell'appezzamento. Le parcelle di vigna si gestiscono solo in Vigna. Nella Mappa, scegliendo un appezzamento, il pulsante porta all'orto o alla vigna a seconda del tipo.
+
 ## Comandi vocali e note
 
 Il microfono in alto a destra, accanto ad **Aa**, apre il pannello vocale. Parli, l'app mostra cosa ha sentito e cosa farà, e salva solo quando tocchi **Conferma** (con **Correggi** sistemi la frase).

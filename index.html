@@ -504,7 +504,7 @@ function vMappa(){
   if(sel){
     h+='<div class="panel stack" style="margin-top:12px"><div class="row" style="justify-content:space-between"><h2>'+esc(sel.name)+'</h2><span class="badge b-n">'+TYPEN[sel.type]+'</span></div>';
     h+='<div class="grid2"><label class="f">Nome<input id="pName" value="'+esc(sel.name)+'"></label><label class="f">Tipo<select id="pType">'+["serra","tunnel","campo","vigna"].map(function(t){return '<option value="'+t+'"'+(sel.type===t?' selected':'')+'>'+TYPEN[t]+'</option>'}).join("")+'</select></label></div>';
-    h+='<div class="row"><button class="btn primary" data-act="goImp">Apri impianto</button><button class="btn" data-act="fOpen" data-id="'+sel.id+'">Modifica forma</button><button class="btn danger" data-act="delPlot">'+(UI.confirm==="plot"?'Tocca ancora per eliminare':'Elimina')+'</button></div></div>';
+    h+='<div class="row"><button class="btn primary" data-act="goImp">'+(sel.type==="vigna"?'Apri in Vigna':'Apri nell\'orto')+'</button><button class="btn" data-act="fOpen" data-id="'+sel.id+'">Modifica forma</button><button class="btn danger" data-act="delPlot">'+(UI.confirm==="plot"?'Tocca ancora per eliminare':'Elimina')+'</button></div></div>';
   }
   return h;
 }
@@ -543,14 +543,16 @@ function mapTap(pt,e){
   if(id){S.sel=id;UI.confirm=null;save();render()}
 }
 
+/* L'orto è separato dalla vigna: qui ci sono solo serre, tunnel e pieno campo, con una scelta propria (S.osel) */
+function orti(){return S.plots.filter(function(p){return p.type!=="vigna"})}
+function ortoSel(){var p=plotById(S.osel);if(!p||p.type==="vigna"){var l=orti().slice().sort(natCmp);p=l[0]||null;S.osel=p?p.id:null}return p}
 function vImpianto(){
-  var p=plotById(S.sel)||S.plots[0];
-  if(!p)return '<div class="top"><h1>Impianto</h1></div><div class="panel">Disegna prima un appezzamento nella mappa.</div>';
-  S.sel=p.id;
-  if(p.type==="vigna")return '<div class="top"><div><div class="eyebrow">'+esc(p.name)+'</div><h1>Orto</h1></div><select id="impSel" aria-label="Appezzamento" style="width:auto;max-width:48%">'+S.plots.map(function(q){return '<option value="'+q.id+'"'+(q.id===p.id?' selected':'')+'>'+esc(q.name)+'</option>'}).join("")+'</select></div><div class="panel stack"><span>Questa è una parcella di vigna: filari e ceppi si gestiscono nella sezione Vigna.</span><div><button class="btn primary" data-act="vOpen" data-id="'+p.id+'">Apri in Vigna</button></div></div>';
+  var p=ortoSel();if(!CROPS[S.cropSel]||CROPS[S.cropSel].vine)S.cropSel=Object.keys(CROPS).filter(function(c){return !CROPS[c].vine})[0];
+  if(!p)return '<div class="top"><h1>Orto</h1></div><div class="panel stack"><h2>Nessun appezzamento dell\'orto</h2><span>Aggiungi una serra, un tunnel o un campo nella Mappa: disegnalo, importalo da file GPS o inserisci le misure di un rettangolo.</span><div><button class="btn primary" data-tab="mappa">Vai alla Mappa</button></div></div>';
+  var sel='<select id="impSel" aria-label="Appezzamento dell\'orto" style="width:auto;max-width:48%">'+orti().slice().sort(natCmp).map(function(q){return '<option value="'+q.id+'"'+(q.id===p.id?' selected':'')+'>'+esc(q.name)+'</option>'}).join("")+'</select>';
   if(!VIEWS["imp-"+p.id]){fitView("imp-"+p.id,bbox(p.pts),1);VIEWS["imp-"+p.id].aspect=Math.min(1.1,Math.max(0.45,(bbox(p.pts).y1-bbox(p.pts).y0+2)/(bbox(p.pts).x1-bbox(p.pts).x0+2)))}
   var cs=cropsIn(p),cf=conflicts(p),hb=harvestBlock(p);
-  var h='<div class="top"><div><div class="eyebrow">'+TYPEN[p.type]+' · '+m2(area(p.pts))+' · '+p.plants.length.toLocaleString("it-IT")+' piante</div><h1>Impianto</h1></div><select id="impSel" aria-label="Appezzamento" style="width:auto;max-width:48%">'+S.plots.map(function(q){return '<option value="'+q.id+'"'+(q.id===p.id?' selected':'')+'>'+esc(q.name)+'</option>'}).join("")+'</select></div>';
+  var h='<div class="top"><div><div class="eyebrow">'+TYPEN[p.type]+' · '+m2(area(p.pts))+' · '+p.plants.length.toLocaleString("it-IT")+' piante</div><h1>Orto</h1></div>'+sel+'</div>';
   h+='<div class="row" style="margin-bottom:8px">'+[["pianta","Pianta"],["rimuovi","Rimuovi"],["sposta","Solo vista"]].map(function(m){return '<button class="btn sm" data-act="mode" data-m="'+m[0]+'" aria-pressed="'+(UI.mode===m[0])+'">'+m[1]+'</button>'}).join("")+'</div>';
   h+='<div class="mapwrap"><svg id="impsvg" role="img" aria-label="Pianta dell\'appezzamento con le piante"></svg><div class="zoom"><button data-act="zin" data-k="imp-'+p.id+'" aria-label="Ingrandisci">+</button><button data-act="zout" data-k="imp-'+p.id+'" aria-label="Rimpicciolisci">−</button><button data-act="zfit" data-k="imp-'+p.id+'" aria-label="Adatta" style="font-size:13px">⤢</button></div></div>';
   if(cf.bad.size){var mn=1e9;cf.bad.forEach(function(i){mn=Math.min(mn,cf.minD[i])});h+='<div class="panel risk" style="margin-top:10px;background:var(--warn-bg);color:var(--warn)"><b>!</b><div><b>'+cf.bad.size+' piante troppo vicine</b><br><span class="small">Distanza minima trovata '+Math.round(mn*100)+' cm. Usa "Rimuovi" e ripianta.</span></div></div>'}
@@ -563,7 +565,7 @@ function vImpianto(){
   return h;
 }
 function drawImp(){
-  var svg=$("#impsvg");if(!svg)return;var p=plotById(S.sel),key="imp-"+p.id,v=vbOf(key);
+  var svg=$("#impsvg");if(!svg)return;var p=ortoSel(),key="imp-"+p.id,v=vbOf(key);
   svg.setAttribute("viewBox",v.x+" "+v.y+" "+v.w+" "+v.h);
   var pts=p.pts.map(function(q){return q.join(",")}).join(" "),g='';
   g+='<polygon points="'+pts+'" fill="var(--soil-2)" stroke="'+STROKE[p.type]+'" stroke-width="2.5" vector-effect="non-scaling-stroke"/>';
@@ -581,7 +583,7 @@ function drawImp(){
   svg.innerHTML=g;
 }
 function impTap(pt){
-  var p=plotById(S.sel);if(UI.mode==="sposta")return;
+  var p=ortoSel();if(UI.mode==="sposta")return;
   if(UI.mode==="rimuovi"){var best=-1,bd=1e9;p.plants.forEach(function(pl,i){var d=Math.hypot(pl.x-pt[0],pl.y-pt[1]);if(d<bd){bd=d;best=i}});var v=vbOf("imp-"+p.id);if(best>=0&&bd<Math.max(0.3,v.w/25)){p.plants.splice(best,1);save();render()}return}
   if(!pip(pt,p.pts)){toast("Tocca dentro l'appezzamento");return}
   var c=S.cropSel,x=Math.round(pt[0]*20)/20,y=Math.round(pt[1]*20)/20,close=null;
@@ -1181,7 +1183,7 @@ function vineChange(t){
 function afterRender(){
   if(UI.fedit&&window.QOForma){window.QOForma.after();return}
   if(UI.tab==="mappa"){if(window.QOMap&&window.QOMap.ok()&&$("#lmapSlot"))window.QOMap.mount($("#lmapSlot"));else{drawMap();var s=$("#mapsvg");if(s)bindPan(s,"map",function(pt,e){mapTap(pt,e)})}}
-  if(UI.tab==="impianto"){drawImp();var s2=$("#impsvg");if(s2)bindPan(s2,"imp-"+S.sel,impTap)}
+  if(UI.tab==="impianto"){drawImp();var s2=$("#impsvg");if(s2&&ortoSel())bindPan(s2,"imp-"+S.osel,impTap)}
   if(UI.tab==="vigna"&&UI.gedit&&window.QOFil)window.QOFil.after();
   if(UI.tab==="vigna"){drawVine();var s3=$("#vinesvg");if(s3)bindPan(s3,"vine-"+UI.vsel,vineTap);drawVmap();var s4=$("#vmapsvg");if(s4)bindPan(s4,vmapKey(),vmapTap)}
   if(UI.scrollDet){UI.scrollDet=false;var dt=$("#vdet");if(dt)setTimeout(function(){dt.scrollIntoView({behavior:"smooth",block:"start"})},30)}
@@ -1204,7 +1206,7 @@ document.addEventListener("click",function(e){
       var p={id:uid(),name:nm,type:ty,pts:d.pts,plants:[]};if(tv)p.ter=tv;else autoTer(p);if(p.type==="vigna"){p.vine=vineDefaults(UI.pendingVine);UI.vsel=p.id;UI.tab="vigna";UI.vtab="parcelle"}UI.pendingVine=null;S.plots.push(p);S.sel=p.id;UI.draw=null;delete VIEWS.map;save();toast("Area salvata: "+m2(area(p.pts)))},
     rectAdd:function(){var L=parseFloat($("#rL").value),W=parseFloat($("#rW").value);if(!(L>0&&W>0)){toast("Inserisci lunghezza e larghezza");return}var all=[];S.plots.forEach(function(p){all=all.concat(p.pts)});var bb=all.length?bbox(all):{x0:0,y1:-4};var p={id:uid(),name:"Nuova area "+(S.plots.length+1),type:$("#rT").value,pts:rect(bb.x0,bb.y1+4,L,W),plants:[]};if(p.type==="vigna")p.vine=vineDefaults();autoTer(p);S.plots.push(p);S.sel=p.id;UI.draw=null;delete VIEWS.map;save();toast("Rettangolo "+L+" × "+W+" m creato")},
     selPlot:function(){S.sel=id;save()},
-    goImp:function(){UI.tab="impianto"},
+    goImp:function(){var p=plotById(S.sel);if(p&&p.type==="vigna"){UI.tab="vigna";UI.vtab="parcelle";UI.vsel=p.id;UI.scrollDet=true;return}if(p)S.osel=p.id;UI.tab="impianto"},
     delPlot:function(){if(UI.confirm!=="plot"){UI.confirm="plot";return}S.plans=S.plans.filter(function(p){return p.plot!==S.sel});S.plots=S.plots.filter(function(p){return p.id!==S.sel});S.sel=S.plots[0]&&S.plots[0].id;UI.confirm=null;delete VIEWS.map;save()},
     mode:function(){UI.mode=b.getAttribute("data-m")},
     homeAll:function(){UI.homeAll=!UI.homeAll},
@@ -1218,8 +1220,8 @@ document.addEventListener("click",function(e){
       window.scrollTo(0,0)},
     homeDone:function(){var pl=S.plans.find(function(p){return p.id===id});if(!pl)return;UI.tab="trattamenti";if(window.QOInv&&window.QOInv.needsForm(pl)){UI.doneFor=pl.id;return}pl.done.push(iso(today()));save();var c=carenzaFor(pl.prod,plotById(pl.plot)).days;toast(c?"Registrato. Non raccogliere fino a "+fmt(addDays(today(),c)):"Registrato")},
     crop:function(){S.cropSel=b.getAttribute("data-c");UI.mode="pianta";save()},
-    fill:function(){var p=plotById(S.sel),n=fill(p,S.cropSel);save();toast(n?n.toLocaleString("it-IT")+" piante di "+CROPS[S.cropSel].n.toLowerCase()+" aggiunte":"Nessuno spazio libero per questa coltura")},
-    clear:function(){if(UI.confirm!=="clear"){UI.confirm="clear";return}plotById(S.sel).plants=[];UI.confirm=null;save()},
+    fill:function(){var p=ortoSel(),n=fill(p,S.cropSel);save();toast(n?n.toLocaleString("it-IT")+" piante di "+CROPS[S.cropSel].n.toLowerCase()+" aggiunte":"Nessuno spazio libero per questa coltura")},
+    clear:function(){if(UI.confirm!=="clear"){UI.confirm="clear";return}ortoSel().plants=[];UI.confirm=null;save()},
     newPlan:function(){var P=PRODUCTS.rame;UI.planForm={prod:"rame",plot:S.sel||S.plots[0].id,start:iso(today()),every:P.every[0],count:3,rain:true,cu:0.6}},
     planFrom:function(){var k=b.getAttribute("data-p"),P=PRODUCTS[k];UI.planForm={prod:k,plot:b.getAttribute("data-plot"),start:iso(today()),every:P.every[0],count:P.maxAll||3,rain:!!P.rainWash,cu:0.6};window.scrollTo(0,0)},
     planCancel:function(){UI.planForm=null},
@@ -1236,7 +1238,7 @@ function readPlanForm(){var f=UI.planForm;if(!f)return;var g=function(i){var el=
 document.addEventListener("change",function(e){
   var t=e.target;
   if(vineChange(t))return;
-  if(t.id==="impSel"){S.sel=t.value;save();render()}
+  if(t.id==="impSel"){S.osel=t.value;save();render()}
   else if(t.id==="pName"){plotById(S.sel).name=t.value.trim()||"Area";save();render()}
   else if(t.id==="pType"){var pp=plotById(S.sel);pp.type=t.value;if(t.value==="vigna"){if(!pp.vine)pp.vine=vineDefaults();pp.plants=[]}else delete pp.vine;save();render()}
   else if(t.id==="dName"){UI.draw.name=t.value}
