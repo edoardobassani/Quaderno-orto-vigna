@@ -45,6 +45,7 @@
     h += '<div><div class="eyebrow">' + esc(p.name) + '</div><h2>Direzione dei filari</h2></div>';
     h += '<div class="row" role="group" aria-label="Come indicare il filare guida" style="flex-wrap:nowrap;gap:6px">' + toolBtn(e, "dito", "Disegna") + toolBtn(e, "gps", "Cammina") + toolBtn(e, "gira", "Gira") + '</div>';
     h += '<div class="mapwrap"><svg id="gsvg" role="img" aria-label="Parcella con il filare guida e i filari copiati"></svg><div class="zoom"><button data-fi="zin" aria-label="Ingrandisci">+</button><button data-fi="zout" aria-label="Rimpicciolisci">−</button><button data-fi="zfit" aria-label="Adatta" style="font-size:13px">⤢</button></div></div><span class="small muted" id="ghint">' + hint(e) + '</span>';
+    if (window.QOSfondo) h += window.QOSfondo.html();
     h += toolPanel(e);
     h += '<div class="row" style="justify-content:space-between;gap:6px"><span class="small" id="gsum"></span><button class="btn sm" data-fi="rev">Inverti numerazione</button></div>';
     if (nm && !e.form) h += '<span class="small" style="color:var(--warn)">Questa parcella ha ' + nm + (nm === 1 ? ' segno' : ' segni') + ' sui ceppi. Se cambi la direzione, i segni restano sugli stessi numeri di filare e di ceppo, ma finiscono su ceppi diversi.</span>';
@@ -91,9 +92,12 @@
     if (!view) fit();
     s.setAttribute("viewBox", view.x + " " + view.y + " " + view.w + " " + view.h);
     var p = Q.plotById(e.id), g = geo(e), kk = k(), out = '';
-    out += '<polygon points="' + pl(p.pts) + '" fill="var(--vigna-fill)" stroke="var(--vigna)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>';
-    var used = [];
-    g.rows.forEach(function (r, ri) { if (r.segs.length) used.push(ri); r.segs.forEach(function (sg) { out += '<polyline points="' + pl(sg.poly) + '" fill="none" stroke="var(--vigna)" stroke-width="' + (ri === used[0] ? 3 : 1.5) + '" vector-effect="non-scaling-stroke"/>'; }); });
+    var SF = window.QOSfondo, bgOn = !!(SF && SF.on()), bop = SF ? SF.opacity() : 1;
+    /* con la foto sotto: niente riempimento e colori chiari, con la trasparenza scelta */
+    out += '<g opacity="' + bop + '"><polygon points="' + pl(p.pts) + '" fill="' + (bgOn ? 'none' : 'var(--vigna-fill)') + '" stroke="' + (bgOn ? '#fff' : 'var(--vigna)') + '" stroke-width="2.5" vector-effect="non-scaling-stroke"/>';
+    var used = [], rc = bgOn ? '#FFD6E7' : 'var(--vigna)';
+    g.rows.forEach(function (r, ri) { if (r.segs.length) used.push(ri); r.segs.forEach(function (sg) { out += '<polyline points="' + pl(sg.poly) + '" fill="none" stroke="' + rc + '" stroke-width="' + (ri === used[0] ? 3 : 1.5) + '" vector-effect="non-scaling-stroke"/>'; }); });
+    out += '</g>';
     /* numero del primo e dell'ultimo filare, per capire da che parte si conta */
     var r0 = +source(e).r0 || 1, fs = 14 * kk;
     [used[0]].forEach(function (ri) {
@@ -109,8 +113,10 @@
       if (e.stroke && e.stroke.length > 1) out += '<polyline points="' + pl(e.stroke) + '" fill="none" stroke="' + ORANGE + '" stroke-width="4" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
       if (e.tool !== "gira" && !e.tracing) e.guide.forEach(function (q) { out += '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="' + (e.guide.length > 8 ? 7 : 9) * kk + '" fill="var(--surface)" stroke="' + ORANGE + '" stroke-width="3" vector-effect="non-scaling-stroke"/>'; });
     }
-    out += '<text x="' + (view.x + 12 * kk) + '" y="' + (view.y + 22 * kk) + '" text-anchor="start" font-size="' + 14 * kk + '" font-weight="700" fill="var(--ink)" pointer-events="none">N ↑</text>';
-    s.innerHTML = out;
+    out += '<text x="' + (view.x + 12 * kk) + '" y="' + (view.y + 22 * kk) + '" text-anchor="start" font-size="' + 14 * kk + '" font-weight="700" fill="var(--ink)" stroke="var(--surface)" stroke-width="3" paint-order="stroke" pointer-events="none">N ↑</text>';
+    if (!s.querySelector("#gbg")) s.innerHTML = '<g id="gbg"></g><g id="gfg"></g>';
+    if (SF) SF.paint(s.querySelector("#gbg"), view, kk); else s.querySelector("#gbg").innerHTML = "";
+    s.querySelector("#gfg").innerHTML = out;
     var sum = $("#gsum"); if (sum) sum.textContent = used.length + (used.length === 1 ? " filare · " : " filari · ") + g.ceppi.toLocaleString("it-IT") + " ceppi · il filare " + r0 + " è quello spesso";
   }
   function redraw() { if (!raf) raf = requestAnimationFrame(draw); }
@@ -241,6 +247,6 @@
 
   window.QOFil = {
     open: open, close: close, html: html,
-    after: function () { if (!E()) return; bind(); draw(); }
+    after: function () { if (!E()) return; if (window.QOSfondo) window.QOSfondo.bind(redraw); bind(); draw(); }
   };
 })();

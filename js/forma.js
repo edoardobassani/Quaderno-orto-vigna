@@ -29,6 +29,7 @@
     h += '<div class="panel stack">';
     h += '<div class="mapwrap"><svg id="fsvg" role="img" aria-label="Forma della parcella con i punti da trascinare"></svg><div class="zoom"><button data-fo="zin" aria-label="Ingrandisci">+</button><button data-fo="zout" aria-label="Rimpicciolisci">−</button><button data-fo="zfit" aria-label="Adatta" style="font-size:13px">⤢</button></div></div>';
     h += '<span class="small muted" id="fhint">' + (e.move ? 'Trascina la forma per spostarla tutta insieme.' : 'Trascina i punti per spostarli. Trascina o tocca un “+” per aggiungere un punto. Tocca un punto per sceglierlo.') + '</span>';
+    if (window.QOSfondo) h += window.QOSfondo.html();
     h += '<div class="row" style="gap:6px"><button class="btn sm" data-fo="del"' + (e.sel < 0 || e.pts.length <= 3 ? ' aria-disabled="true" style="opacity:.55"' : '') + '>Togli punto</button><button class="btn sm" data-fo="undo"' + (e.undo.length ? '' : ' aria-disabled="true" style="opacity:.55"') + '>Annulla ultima</button><button class="btn sm" data-fo="move" aria-pressed="' + e.move + '">Sposta tutta</button></div>';
     h += '<span class="small" id="fsum"></span>';
     if (nm) h += '<span class="small" style="color:var(--warn)">Questa parcella ha ' + nm + (nm === 1 ? ' segno' : ' segni') + ' sui ceppi. Se cambi la forma, i filari si ricalcolano e i segni possono finire su ceppi diversi.</span>';
@@ -48,26 +49,38 @@
   function k() { var s = svgEl(), r = s && s.getBoundingClientRect(); return view.w / ((r && r.width) || 360); }
   function pl(pts) { return pts.map(function (q) { return q[0].toFixed(2) + "," + q[1].toFixed(2); }).join(" "); }
   function mids(pts) { return pts.map(function (q, i) { var n = pts[(i + 1) % pts.length]; return [(q[0] + n[0]) / 2, (q[1] + n[1]) / 2]; }); }
+  /* i "+" si mostrano (e si toccano) solo sui lati abbastanza lunghi sullo schermo; gli altri valgono null */
+  function midsShown(pts) { var kk = k(); return mids(pts).map(function (m, i) { var a = pts[i], b = pts[(i + 1) % pts.length]; return Math.hypot(b[0] - a[0], b[1] - a[1]) / kk > 46 ? m : null; }); }
+  /* punti fitti sullo schermo (forme importate da GPS): punti piccoli finché non si ingrandisce */
+  function dense(pts) { var L = pts.map(function (a, i) { var b = pts[(i + 1) % pts.length]; return Math.hypot(b[0] - a[0], b[1] - a[1]); }).sort(function (x, y) { return x - y; }); return L[Math.floor(L.length / 2)] / k() < 26; }
   function tmpPlot(e) { var p = Q.plotById(e.id); return { id: "_f", type: p.type, pts: e.pts, vine: p.vine }; }
   function draw() {
     raf = 0; var e = E(), s = svgEl(); if (!e || !s) return;
     if (!view) fit();
     s.setAttribute("viewBox", view.x + " " + view.y + " " + view.w + " " + view.h);
     var p = Q.plotById(e.id), kk = k(), out = '', col = p.vine ? "var(--vigna)" : Q.stroke[p.type], fill = p.vine ? "var(--vigna-fill)" : Q.fill[p.type];
+    var SF = window.QOSfondo, bgOn = !!(SF && SF.on()), bop = SF ? SF.opacity() : 1;
+    if (bgOn) { col = "#fff"; fill = "rgba(255,255,255,0.12)"; }
+    out += '<g opacity="' + bop + '">';
     /* le parcelle vicine, in grigio, per allineare i bordi */
-    S().plots.forEach(function (o) { if (o.id === p.id) return; var b = Q.bbox(o.pts); if (b.x1 < view.x || b.x0 > view.x + view.w || b.y1 < view.y || b.y0 > view.y + view.h) return; out += '<polygon points="' + pl(o.pts) + '" fill="var(--surface-2)" stroke="var(--ink-2)" stroke-opacity=".5" stroke-width="1" vector-effect="non-scaling-stroke"/>'; });
+    S().plots.forEach(function (o) { if (o.id === p.id) return; var b = Q.bbox(o.pts); if (b.x1 < view.x || b.x0 > view.x + view.w || b.y1 < view.y || b.y0 > view.y + view.h) return; out += '<polygon points="' + pl(o.pts) + '" fill="' + (bgOn ? 'none' : 'var(--surface-2)') + '" stroke="' + (bgOn ? '#fff' : 'var(--ink-2)') + '" stroke-opacity=".5" stroke-width="1" vector-effect="non-scaling-stroke"/>'; });
     out += '<polygon points="' + pl(e.pts) + '" fill="' + fill + '" stroke="' + col + '" stroke-width="2.5" vector-effect="non-scaling-stroke"/>';
     /* forma di prima, tratteggiata sopra, per confronto */
-    if (JSON.stringify(p.pts) !== JSON.stringify(e.pts)) out += '<polygon points="' + pl(p.pts) + '" fill="none" stroke="var(--ink)" stroke-dasharray="5 4" stroke-width="1.5" vector-effect="non-scaling-stroke" pointer-events="none"/>';
+    if (JSON.stringify(p.pts) !== JSON.stringify(e.pts)) out += '<polygon points="' + pl(p.pts) + '" fill="none" stroke="' + (bgOn ? '#FFE066' : 'var(--ink)') + '" stroke-dasharray="5 4" stroke-width="1.5" vector-effect="non-scaling-stroke" pointer-events="none"/>';
     var g = null;
     if (p.vine) { try { g = Q.vineGeo(tmpPlot(e)); } catch (_) { g = null; }
-      if (g) g.rows.forEach(function (r, ri) { r.segs.forEach(function (sg, k2) { out += '<polyline points="' + pl(Q.rowLine(g, ri, k2)) + '" fill="none" stroke="var(--vigna)" stroke-opacity=".6" stroke-width="1.2" vector-effect="non-scaling-stroke"/>'; }); }); }
+      if (g) g.rows.forEach(function (r, ri) { r.segs.forEach(function (sg, k2) { out += '<polyline points="' + pl(Q.rowLine(g, ri, k2)) + '" fill="none" stroke="' + (bgOn ? '#FFD6E7' : 'var(--vigna)') + '" stroke-opacity=".7" stroke-width="1.2" vector-effect="non-scaling-stroke"/>'; }); }); }
+    out += '</g>';
     if (!e.move) {
-      mids(e.pts).forEach(function (q) { out += '<g><circle cx="' + q[0] + '" cy="' + q[1] + '" r="' + 8 * kk + '" fill="var(--surface)" stroke="' + ORANGE + '" stroke-width="1.5" stroke-dasharray="3 2" vector-effect="non-scaling-stroke"/><text x="' + q[0] + '" y="' + (q[1] + 4.5 * kk) + '" font-size="' + 14 * kk + '" text-anchor="middle" font-weight="700" fill="' + ORANGE + '">+</text></g>'; });
-      e.pts.forEach(function (q, i) { out += '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="' + (i === e.sel ? 11 : 8) * kk + '" fill="' + (i === e.sel ? ORANGE : 'var(--surface)') + '" stroke="' + ORANGE + '" stroke-width="3" vector-effect="non-scaling-stroke"/>'; });
+      var dn = dense(e.pts);
+      midsShown(e.pts).forEach(function (q) { if (!q) return; out += '<g><circle cx="' + q[0] + '" cy="' + q[1] + '" r="' + 8 * kk + '" fill="var(--surface)" stroke="' + ORANGE + '" stroke-width="1.5" stroke-dasharray="3 2" vector-effect="non-scaling-stroke"/><text x="' + q[0] + '" y="' + (q[1] + 4.5 * kk) + '" font-size="' + 14 * kk + '" text-anchor="middle" font-weight="700" fill="' + ORANGE + '">+</text></g>'; });
+      e.pts.forEach(function (q, i) { out += '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="' + (i === e.sel ? 11 : dn ? 4 : 8) * kk + '" fill="' + (i === e.sel ? ORANGE : 'var(--surface)') + '" stroke="' + ORANGE + '" stroke-width="' + (dn && i !== e.sel ? 2 : 3) + '" vector-effect="non-scaling-stroke"/>'; });
+      var fh = document.getElementById("fhint"); if (fh) fh.textContent = dn ? "I punti sono fitti: ingrandisci con due dita per spostarli comodamente." : "Trascina i punti per spostarli. Trascina o tocca un “+” per aggiungere un punto. Tocca un punto per sceglierlo.";
     }
-    out += '<text x="' + (view.x + 12 * kk) + '" y="' + (view.y + 22 * kk) + '" font-size="' + 14 * kk + '" font-weight="700" fill="var(--ink)" pointer-events="none">N ↑</text>';
-    s.innerHTML = out;
+    out += '<text x="' + (view.x + 12 * kk) + '" y="' + (view.y + 22 * kk) + '" font-size="' + 14 * kk + '" font-weight="700" fill="var(--ink)" stroke="var(--surface)" stroke-width="3" paint-order="stroke" pointer-events="none">N ↑</text>';
+    if (!s.querySelector("#fbg")) s.innerHTML = '<g id="fbg"></g><g id="ffg"></g>';
+    if (SF) SF.paint(s.querySelector("#fbg"), view, kk); else s.querySelector("#fbg").innerHTML = "";
+    s.querySelector("#ffg").innerHTML = out;
     var a0 = Q.area(p.pts), a1 = Q.area(e.pts), sum = $("#fsum");
     if (sum) sum.textContent = Q.num(a1 / 1e4, 2) + " ha (prima " + Q.num(a0 / 1e4, 2) + ") · " + e.pts.length + " punti" + (g ? " · " + g.rows.filter(function (r) { return r.segs.length; }).length + " filari, " + g.ceppi.toLocaleString("it-IT") + " ceppi" : "");
   }
@@ -89,7 +102,7 @@
       if (a.length !== 1) return;
       var pt = toM(ev);
       if (e.move) { st = { kind: "move", x: ev.clientX, y: ev.clientY, p0: pt, orig: e.pts.map(function (q) { return q.slice(); }), moved: false }; return; }
-      var vi = nearest(e.pts, pt, 24), mi = vi < 0 ? nearest(mids(e.pts), pt, 22) : -1;
+      var vi = nearest(e.pts, pt, 24), mi = vi < 0 ? nearest(midsShown(e.pts).map(function (m) { return m || [1e12, 1e12]; }), pt, 22) : -1;
       if (vi >= 0) st = { kind: "vert", i: vi, x: ev.clientX, y: ev.clientY, moved: false };
       else if (mi >= 0) st = { kind: "mid", i: mi, x: ev.clientX, y: ev.clientY, moved: false };
       else st = { kind: "pan", x: ev.clientX, y: ev.clientY, v: Object.assign({}, view), moved: false };
@@ -163,6 +176,6 @@
 
   window.QOForma = {
     open: open, close: close, html: html,
-    after: function () { if (!E()) return; bind(); draw(); }
+    after: function () { if (!E()) return; if (window.QOSfondo) window.QOSfondo.bind(redraw); bind(); draw(); }
   };
 })();
