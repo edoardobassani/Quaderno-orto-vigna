@@ -1,5 +1,7 @@
 # Guida per gli assistenti AI (e per chi programma)
 
+Il diario dello sviluppo (cosa è stato fatto, decisioni, prossimi passi) è in [SVILUPPO.md](SVILUPPO.md).
+
 Questo file serve a qualsiasi assistente AI (Claude, ChatGPT/Codex, Gemini, Copilot, Cursor…) che lavori su questo repository. Leggilo tutto prima di cambiare il codice. `CLAUDE.md` e `GEMINI.md` rimandano qui.
 
 ## Il progetto in breve
